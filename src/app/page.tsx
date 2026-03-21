@@ -190,13 +190,11 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                   )}
                   
             {screenshotUrl && audit.status === "completed" && (
-              <div className="relative mx-auto" style={{ width: '100%', minHeight: '800px', maxWidth: '1280px' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+              <div className="relative mx-auto" style={{ minHeight: '800px', width: '100%', maxWidth: '1280px' }}>
                 <img 
                   src={screenshotUrl} 
                   alt="Website screenshot" 
-                  className="w-full h-auto block shadow-md border"
-                  style={{ backgroundColor: '#f8f9fa' }} 
+                  className="w-full h-auto block shadow-md border bg-gray-50"
                   onLoad={() => console.log("Image loaded successfully")}
                   onError={(e) => console.error("Error loading image", e)}
                 />
