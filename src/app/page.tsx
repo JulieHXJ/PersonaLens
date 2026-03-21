@@ -71,7 +71,7 @@ export default function Dashboard() {
 }
 
 function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
-  const [activeTab, setActiveTab] = useState<"overview" | "analysis" | "scoring" | "improvements">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analysis" | "improvements">("overview");
   const [viewMode, setViewMode] = useState<"highlights" | "iframe">("highlights");
   const [hoveredFinding, setHoveredFinding] = useState<number | null>(null);
   const [selectedPersona, setSelectedPersona] = useState<"All" | "Senior" | "A11y" | "Pro">("All");
@@ -131,12 +131,6 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
             Analysis (Live View)
           </button>
           <button 
-            className={`py-3 font-medium text-sm border-b-2 transition-colors ${activeTab === 'scoring' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'} ${audit.status !== 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
-            onClick={() => audit.status === 'completed' && setActiveTab('scoring')}
-          >
-            Scoring Details
-          </button>
-          <button 
             className={`py-3 font-medium text-sm border-b-2 transition-colors ${activeTab === 'improvements' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'} ${audit.status !== 'completed' ? 'opacity-50 cursor-not-allowed' : ''}`}
             onClick={() => audit.status === 'completed' && setActiveTab('improvements')}
           >
@@ -179,7 +173,14 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                         else { title = "Digital Native"; color = "text-blue-600"; bg = "bg-blue-600"; icon = <MonitorSmartphone className="w-6 h-6"/>; }
 
                         return (
-                          <div key={report._id} className="bg-white rounded-xl shadow-sm border p-6 flex flex-col">
+                          <div 
+                            key={report._id} 
+                            onClick={() => {
+                              setSelectedPersona(report.persona_type);
+                              setActiveTab('analysis');
+                            }}
+                            className="bg-white rounded-xl shadow-sm border p-6 flex flex-col cursor-pointer transition-transform hover:-translate-y-1 hover:shadow-md"
+                          >
                             <div className={`flex items-center gap-3 mb-4 ${color}`}>
                               {icon}
                               <h3 className="font-bold text-gray-900 text-lg">{title}</h3>
@@ -229,6 +230,50 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                   </div>
                 )}
               </div>
+
+              {/* Persona Summary Details - Displayed when a specific persona is selected */}
+              {selectedPersona !== "All" && (
+                <div className="mb-6">
+                  {reports?.filter(r => r.persona_type === selectedPersona).map((report) => {
+                    let icon;
+                    let title;
+                    let color;
+                    
+                    if (report.persona_type === "Senior") {
+                      icon = <UserCircle className="w-6 h-6 text-orange-600" />;
+                      title = "Oma Schmidt (Senior)";
+                      color = "orange";
+                    } else if (report.persona_type === "A11y") {
+                      icon = <Scale className="w-6 h-6 text-purple-600" />;
+                      title = "Legal Advisor (A11y)";
+                      color = "purple";
+                    } else {
+                      icon = <MonitorSmartphone className="w-6 h-6 text-blue-600" />;
+                      title = "Digital Native (Pro)";
+                      color = "blue";
+                    }
+
+                    return (
+                      <div key={report._id} className="bg-white rounded-xl shadow-sm border p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-3 rounded-full bg-${color}-100`}>
+                              {icon}
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900">{title}</h3>
+                          </div>
+                          <div className="text-2xl font-black text-gray-800">
+                            Score: {report.score}/100
+                          </div>
+                        </div>
+                        <div className="prose max-w-none text-gray-700 bg-gray-50 p-4 rounded-lg border">
+                          <p>{report.summary_en || report.summary_de}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               
               {audit.status === "failed" && (
                   <div className="bg-red-50 text-red-600 p-4 rounded-md mb-4 border border-red-200">
@@ -424,50 +469,6 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
             </div>
           </div>
               </>
-            )}
-
-            {activeTab === 'scoring' && (
-              <div className="space-y-6 max-w-4xl mx-auto">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Detailed Scoring & Analysis</h2>
-                {reports?.map((report) => {
-                  let icon;
-                  let title;
-                  let color;
-                  
-                  if (report.persona_type === "Senior") {
-                    icon = <UserCircle className="w-6 h-6 text-orange-600" />;
-                    title = "Oma Schmidt (Senior)";
-                    color = "orange";
-                  } else if (report.persona_type === "A11y") {
-                    icon = <Scale className="w-6 h-6 text-purple-600" />;
-                    title = "Legal Advisor (A11y)";
-                    color = "purple";
-                  } else {
-                    icon = <MonitorSmartphone className="w-6 h-6 text-blue-600" />;
-                    title = "Digital Native (Pro)";
-                    color = "blue";
-                  }
-
-                  return (
-                    <div key={report._id} className="bg-white rounded-xl shadow-sm border p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-3 rounded-full bg-${color}-100`}>
-                            {icon}
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-                        </div>
-                        <div className="text-2xl font-black text-gray-800">
-                          Score: {report.score}/100
-                        </div>
-                      </div>
-                      <div className="prose max-w-none text-gray-700 bg-gray-50 p-4 rounded-lg border">
-                        <p>{report.summary_en || report.summary_de}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             )}
 
             {activeTab === 'improvements' && (
