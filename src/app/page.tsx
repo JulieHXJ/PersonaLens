@@ -190,7 +190,7 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                   )}
                   
             {screenshotUrl && audit.status === "completed" && (
-              <div className="relative mx-auto" style={{ width: '1280px', minHeight: '800px' }}>
+              <div className="relative mx-auto" style={{ width: '100%', minHeight: '800px', maxWidth: '1280px' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
                   src={screenshotUrl} 
