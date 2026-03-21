@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #f5f5f8;
+    --on-surface: #1a1a2e;
+    --on-surface-variant: #555570;
+    --surface: #f5f5f8;
+    --surface-container: #e8e8ee;
+    --surface-container-low: #ededf2;
+    --surface-container-lowest: #ffffff;
+    --surface-container-high: #dddde5;
+    --surface-container-highest: #d0d0da;
+    --surface-variant: #e0e0e8;
+    --outline-variant: #c0c0cc;
+    --sidebar-bg: #f0f0f5;
+    --sidebar-active-bg: #e0e0ea;
+    --sidebar-text: #555570;
+    --sidebar-active-text: #005fad;
+    --terminal-bg: #f8f8fc;
+  }
+  .dark {
+    --background: #131316;
+    --on-surface: #e4e1e5;
+    --on-surface-variant: #c0c7d5;
+    --surface: #131316;
+    --surface-container: #1f1f22;
+    --surface-container-low: #1b1b1e;
+    --surface-container-lowest: #0e0e11;
+    --surface-container-high: #2a2a2d;
+    --surface-container-highest: #353437;
+    --surface-variant: #353437;
+    --outline-variant: #404753;
+    --sidebar-bg: #1B1B1E;
+    --sidebar-active-bg: #2A2A2D;
+    --sidebar-text: #C0C7D5;
+    --sidebar-active-text: #A4C9FF;
+    --terminal-bg: #0E0E11;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.material-symbols-filled {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: #40475333;
+  height: 4px;
+  border-radius: 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px;
+  background-color: #a4c9ff;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+}
+
+input[type="range"]::-moz-range-track {
+  background: #40475333;
+  height: 4px;
+  border-radius: 2px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  background-color: #a4c9ff;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  border: none;
+}
+
+/* Custom scrollbar for terminal */
+.terminal-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-scroll::-webkit-scrollbar-thumb {
+  background: #404753;
+  border-radius: 3px;
+}
+
+::selection {
+  background: rgba(164, 201, 255, 0.3);
+}

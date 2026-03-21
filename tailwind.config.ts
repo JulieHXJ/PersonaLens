@@ -1,0 +1,77 @@
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  darkMode: "class",
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  theme: {
+    extend: {
+      colors: {
+        // Theme-aware colors (use CSS variables)
+        background: "var(--background)",
+        "on-surface": "var(--on-surface)",
+        "on-surface-variant": "var(--on-surface-variant)",
+        surface: "var(--surface)",
+        "surface-container": "var(--surface-container)",
+        "surface-container-low": "var(--surface-container-low)",
+        "surface-container-lowest": "var(--surface-container-lowest)",
+        "surface-container-high": "var(--surface-container-high)",
+        "surface-container-highest": "var(--surface-container-highest)",
+        "surface-variant": "var(--surface-variant)",
+        "outline-variant": "var(--outline-variant)",
+
+        // Static colors (same in light & dark)
+        primary: "#a4c9ff",
+        "primary-container": "#3492f6",
+        "on-primary": "#00315d",
+        "on-primary-container": "#002a52",
+        "on-primary-fixed-variant": "#004884",
+        "on-primary-fixed": "#001c39",
+        "primary-fixed": "#d4e3ff",
+        "primary-fixed-dim": "#a4c9ff",
+        "inverse-primary": "#005fad",
+        "inverse-surface": "#e4e1e5",
+        "inverse-on-surface": "#303033",
+        secondary: "#b8c4ff",
+        "secondary-container": "#2b4297",
+        "on-secondary": "#09277d",
+        "on-secondary-container": "#a4b5ff",
+        "on-secondary-fixed": "#001453",
+        "on-secondary-fixed-variant": "#294094",
+        "secondary-fixed": "#dde1ff",
+        "secondary-fixed-dim": "#b8c4ff",
+        tertiary: "#a7d641",
+        "tertiary-container": "#749e00",
+        "on-tertiary": "#253600",
+        "on-tertiary-container": "#202e00",
+        "on-tertiary-fixed": "#141f00",
+        "on-tertiary-fixed-variant": "#374e00",
+        "tertiary-fixed": "#c2f35b",
+        "tertiary-fixed-dim": "#a7d641",
+        error: "#ffb4ab",
+        "error-container": "#93000a",
+        "on-error": "#690005",
+        "on-error-container": "#ffdad6",
+        outline: "#8a919e",
+        "surface-dim": "#131316",
+        "surface-bright": "#39393c",
+        "surface-tint": "#a4c9ff",
+        "on-background": "var(--on-surface)",
+      },
+      fontFamily: {
+        headline: ["Inter", "sans-serif"],
+        body: ["Inter", "sans-serif"],
+        label: ["Inter", "sans-serif"],
+        mono: ["'JetBrains Mono'", "monospace"],
+      },
+      borderRadius: {
+        DEFAULT: "0.125rem",
+        lg: "0.25rem",
+        xl: "0.5rem",
+        full: "0.75rem",
+      },
+    },
+  },
+  plugins: [require("@tailwindcss/forms")],
+};
+
+export default config;
