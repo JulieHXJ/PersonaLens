@@ -50,6 +50,7 @@ export const addPersonaReport = mutation({
       })
     ),
     summary_en: v.optional(v.string()),
+    keywords: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("persona_reports", {
@@ -58,6 +59,7 @@ export const addPersonaReport = mutation({
       score: args.score,
       findings: args.findings,
       summary_en: args.summary_en,
+      keywords: args.keywords,
     });
   },
 });

@@ -25,6 +25,7 @@ const responseSchema = z.object({
       })
     ).describe("List of identified issues with their specific coordinates in the provided HTML context box properties."),
     summary_en: z.string().describe("A concise summary in English (Formal legal language for Legal Advisor, Simple plain English for Oma Schmidt, Modern Tech English for Digital Native)."),
+    keywords: z.array(z.string()).describe("3-5 keywords summarizing the review in English"),
   })).describe("The array of reports, one for each requested persona."),
 });
 
@@ -97,6 +98,7 @@ Ensure ALL output, including summaries and issue descriptions, is in English.
           severity: f.severity || "medium"
         })),
         summary_en: report.summary_en,
+        keywords: report.keywords,
       });
     }
     

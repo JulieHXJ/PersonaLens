@@ -79,7 +79,7 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
     api.files.getFileUrl, 
     audit?.screenshotId ? { storageId: audit.screenshotId } : "skip"
   );
-  
+
   console.log("Screenshot URL from Convex:", screenshotUrl);
 
   if (!audit) {
@@ -149,30 +149,31 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                   </div>
                 )}
 
-          <div className="bg-white rounded-lg shadow-sm border overflow-auto relative" style={{ minHeight: '600px' }}>
-            {!screenshotUrl && audit.status !== "failed" && audit.status !== "completed" && (
-              <div className="absolute inset-0 z-10">
-                <iframe 
-                  src={audit.url.startsWith('http') ? audit.url : `https://${audit.url}`} 
-                  className="w-full h-full opacity-50 pointer-events-none"
-                  title="Website Preview"
-                  sandbox="allow-scripts allow-same-origin"
-                />
-                <div className="absolute inset-0 flex items-center justify-center flex-col text-gray-800 bg-white/40 backdrop-blur-sm">
-                  <Loader2 className="w-10 h-10 animate-spin mb-3 text-blue-600" />
-                  <p className="font-medium text-lg drop-shadow-sm">Capturing visual DOM tree...</p>
-                  <p className="text-sm mt-2 text-gray-600 font-medium">Please wait while the AI experts analyze the page</p>
+          <div className="bg-white rounded-lg shadow-sm border relative overflow-hidden" style={{ minHeight: '600px' }}>
+            <div className="w-full h-full overflow-auto">
+              {!screenshotUrl && audit.status !== "failed" && audit.status !== "completed" && (
+                <div className="absolute inset-0 z-10">
+                  <iframe 
+                    src={audit.url.startsWith('http') ? audit.url : `https://${audit.url}`} 
+                    className="w-full h-full opacity-50 pointer-events-none"
+                    title="Website Preview"
+                    sandbox="allow-scripts allow-same-origin"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center flex-col text-gray-800 bg-white/40 backdrop-blur-sm">
+                    <Loader2 className="w-10 h-10 animate-spin mb-3 text-blue-600" />
+                    <p className="font-medium text-lg drop-shadow-sm">Capturing visual DOM tree...</p>
+                    <p className="text-sm mt-2 text-gray-600 font-medium">Please wait while the AI experts analyze the page</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            
-            {audit.status === "analyzing" && screenshotUrl && (
-              <div className="absolute inset-0 flex items-center justify-center flex-col text-gray-800 z-20 bg-white/60 backdrop-blur-md">
-                <Loader2 className="w-10 h-10 animate-spin mb-3 text-blue-600" />
-                <p className="font-medium text-lg drop-shadow-sm">AI experts are analyzing...</p>
-                <p className="text-sm mt-2 text-gray-700 font-medium">Reading the extracted DOM and generating reports</p>
-              </div>
-            )}
+              )}
+              
+              {audit.status === "analyzing" && screenshotUrl && (
+                <div className="absolute inset-0 flex items-center justify-center flex-col text-gray-800 z-20 bg-white/60 backdrop-blur-md">
+                  <Loader2 className="w-10 h-10 animate-spin mb-3 text-blue-600" />
+                  <p className="font-medium text-lg drop-shadow-sm">AI experts are analyzing...</p>
+                  <p className="text-sm mt-2 text-gray-700 font-medium">Reading the extracted DOM and generating reports</p>
+                </div>
+              )}
                   
                   {audit.simplifiedHtml && audit.status === "completed" && (
                       <div className="absolute top-4 left-4 right-4 bg-white/95 backdrop-blur p-4 rounded-md shadow-lg border border-gray-200 text-sm max-h-64 overflow-auto z-10 hidden">
@@ -189,13 +190,13 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                   )}
                   
             {screenshotUrl && audit.status === "completed" && (
-              <div className="relative block mx-auto my-4" style={{ width: '1280px', minHeight: '800px' }}>
+              <div className="relative block mx-auto w-[1280px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
                   src={screenshotUrl} 
                   alt="Website screenshot" 
-                  className="w-full h-auto block shadow-2xl rounded-md border border-gray-200"
-                  style={{ backgroundColor: '#f8f9fa' }} 
+                  className="w-full h-auto block"
+                  style={{ minHeight: '800px', backgroundColor: '#f8f9fa' }} 
                 />
                 
                 {/* Overlay SVGs for flaws */}
@@ -274,7 +275,8 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                 </div>
               </div>
             )}
-                </div>
+            </div>
+          </div>
               </>
             )}
 

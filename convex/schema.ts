@@ -40,5 +40,6 @@ export default defineSchema({
     ),
     summary_en: v.optional(v.string()), // Made optional to support old records that had summary_de
     summary_de: v.optional(v.string()), // Keep for backwards compatibility
+    keywords: v.optional(v.array(v.string())), // 3-5 keywords
   }).index("by_auditId", ["auditId"]),
 });
