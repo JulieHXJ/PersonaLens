@@ -152,7 +152,7 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
           <div className="bg-white rounded-lg shadow-sm border relative overflow-hidden" style={{ minHeight: '600px' }}>
             <div className="w-full h-full overflow-auto relative">
               {!screenshotUrl && audit.status !== "failed" && audit.status !== "completed" && (
-                <div className="absolute inset-0 z-10">
+                  <div className="absolute inset-0 z-10 bg-gray-50/80 pointer-events-none">
                   <iframe 
                     src={audit.url.startsWith('http') ? audit.url : `https://${audit.url}`} 
                     className="w-full h-full opacity-50 pointer-events-none"
