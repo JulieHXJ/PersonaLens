@@ -190,13 +190,13 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                   )}
                   
             {screenshotUrl && audit.status === "completed" && (
-              <div className="relative block mx-auto w-[1280px]">
+              <div className="relative mx-auto w-[1280px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
                   src={screenshotUrl} 
                   alt="Website screenshot" 
-                  className="w-full h-auto block"
-                  style={{ minHeight: '800px', backgroundColor: '#f8f9fa' }} 
+                  className="w-full block"
+                  style={{ backgroundColor: '#f8f9fa' }} 
                 />
                 
                 {/* Overlay SVGs for flaws */}
