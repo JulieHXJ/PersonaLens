@@ -1,11 +1,14 @@
 "use server";
 
 import { chromium } from "playwright";
+import chromiumEdge from "@sparticuz/chromium";
 
 export interface AuditResult {
   screenshotBase64: string;
   simplifiedHtml: string;
 }
+
+export const maxDuration = 60; // 60 seconds max timeout for Vercel Hobby tier
 
 export async function runVisualSensor(url: string): Promise<AuditResult> {
   let browser;
@@ -29,6 +32,13 @@ export async function runVisualSensor(url: string): Promise<AuditResult> {
         '--single-process',
         '--no-zygote'
       ];
+      
+      // Vercel/AWS Lambda specific configurations for serverless environment
+      if (process.env.VERCEL) {
+        options.executablePath = await chromiumEdge.executablePath();
+        options.args = chromiumEdge.args;
+        options.headless = chromiumEdge.headless;
+      }
     }
     browser = await chromium.launch(options);
     console.log("Browser launched. Creating context...");

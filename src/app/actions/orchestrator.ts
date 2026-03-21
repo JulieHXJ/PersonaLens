@@ -7,6 +7,8 @@ import { api } from "../../../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+export const maxDuration = 60; // Set Vercel execution timeout to max for Hobby tier (60s)
+
 export async function startAudit(url: string) {
   // 1. Create audit record
   const auditId = await convex.mutation(api.audits.createAudit, { url });

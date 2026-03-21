@@ -28,6 +28,8 @@ const responseSchema = z.object({
   })).describe("The array of reports, one for each requested persona."),
 });
 
+export const maxDuration = 60; // 60 seconds max timeout for Vercel Hobby tier
+
 export async function runAgentsAnalysis(
   auditId: Id<"website_audits">,
   screenshotBase64: string,
