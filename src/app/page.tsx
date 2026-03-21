@@ -186,93 +186,94 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                       </div>
                   )}
                   
-                  {screenshotUrl && audit.status === "completed" && (
-                    <div className="relative inline-block mt-4 ml-4">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img 
-                        src={screenshotUrl} 
-                        alt="Website screenshot" 
-                        className="max-w-none block shadow-2xl rounded-md border border-gray-200"
-                        style={{ width: '1280px' }} // Match playwright viewport
-                      />
-                      
-                      {/* Overlay SVGs for flaws */}
-                      <div className="absolute inset-0 w-full h-full">
-                        {allFindings.map((finding, idx) => {
-                          // Default to some size if width/height is missing, though they shouldn't be
-                          const width = finding.coordinates.width || 40;
-                          const height = finding.coordinates.height || 40;
-                          const x = finding.coordinates.x;
-                          const y = finding.coordinates.y;
+            {screenshotUrl && audit.status === "completed" && (
+              <div className="relative block mx-auto my-4 w-[1280px]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src={screenshotUrl} 
+                  alt="Website screenshot" 
+                  className="w-full block shadow-2xl rounded-md border border-gray-200"
+                  style={{ minHeight: '800px', backgroundColor: '#f8f9fa' }} 
+                  onLoad={(e) => console.log('Image loaded', e.currentTarget.naturalWidth)}
+                  onError={(e) => console.error('Image failed to load', e.currentTarget.src)}
+                />
+                
+                {/* Overlay SVGs for flaws */}
+                <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                  {allFindings.map((finding, idx) => {
+                    // Default to some size if width/height is missing, though they shouldn't be
+                    const width = finding.coordinates.width || 40;
+                    const height = finding.coordinates.height || 40;
+                    const x = finding.coordinates.x;
+                    const y = finding.coordinates.y;
 
-                          let color = "red";
-                          let colorHex = "#ef4444";
-                          let bgColorHex = "rgba(239, 68, 68, 0.2)";
-                          
-                          if (finding.persona === "Senior") { color = "orange"; colorHex = "#f97316"; bgColorHex = "rgba(249, 115, 22, 0.2)"; }
-                          if (finding.persona === "A11y") { color = "purple"; colorHex = "#a855f7"; bgColorHex = "rgba(168, 85, 247, 0.2)"; }
-                          if (finding.persona === "Pro") { color = "blue"; colorHex = "#3b82f6"; bgColorHex = "rgba(59, 130, 246, 0.2)"; }
+                    let colorHex = "#ef4444";
+                    let bgColorHex = "rgba(239, 68, 68, 0.2)";
+                    
+                    if (finding.persona === "Senior") { colorHex = "#f97316"; bgColorHex = "rgba(249, 115, 22, 0.2)"; }
+                    if (finding.persona === "A11y") { colorHex = "#a855f7"; bgColorHex = "rgba(168, 85, 247, 0.2)"; }
+                    if (finding.persona === "Pro") { colorHex = "#3b82f6"; bgColorHex = "rgba(59, 130, 246, 0.2)"; }
 
-                          const isHovered = hoveredFinding === idx;
+                    const isHovered = hoveredFinding === idx;
 
-                          return (
-                            <div 
-                              key={idx}
-                              className="absolute cursor-pointer transition-all duration-200 ease-in-out"
-                              style={{
-                                left: `${x}px`,
-                                top: `${y}px`,
-                                width: `${width}px`,
-                                height: `${height}px`,
-                                border: `3px solid ${colorHex}`,
-                                backgroundColor: isHovered ? bgColorHex : 'transparent',
-                                zIndex: isHovered ? 50 : 10,
-                                borderRadius: '4px',
-                                boxShadow: isHovered ? `0 0 15px ${colorHex}` : 'none'
-                              }}
-                              onMouseEnter={() => setHoveredFinding(idx)}
-                              onMouseLeave={() => setHoveredFinding(null)}
-                            >
-                              {/* Number Badge */}
-                              <div 
-                                className="absolute -top-3 -left-3 text-white font-bold rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md"
-                                style={{ backgroundColor: colorHex }}
-                              >
-                                {idx + 1}
-                              </div>
+                    return (
+                      <div 
+                        key={idx}
+                        className="absolute cursor-pointer transition-all duration-200 ease-in-out pointer-events-auto"
+                        style={{
+                          left: `${x}px`,
+                          top: `${y}px`,
+                          width: `${width}px`,
+                          height: `${height}px`,
+                          border: `3px solid ${colorHex}`,
+                          backgroundColor: isHovered ? bgColorHex : 'transparent',
+                          zIndex: isHovered ? 50 : 10,
+                          borderRadius: '4px',
+                          boxShadow: isHovered ? `0 0 15px ${colorHex}` : 'none'
+                        }}
+                        onMouseEnter={() => setHoveredFinding(idx)}
+                        onMouseLeave={() => setHoveredFinding(null)}
+                      >
+                        {/* Number Badge */}
+                        <div 
+                          className="absolute -top-3 -left-3 text-white font-bold rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md"
+                          style={{ backgroundColor: colorHex }}
+                        >
+                          {idx + 1}
+                        </div>
 
-                              {/* Tooltip */}
-                              {isHovered && (
-                                <div 
-                                  className="absolute bg-white text-gray-900 p-4 rounded-lg shadow-2xl border border-gray-200 w-80 pointer-events-none"
-                                  style={{
-                                    top: '100%',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    marginTop: '8px'
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded" style={{ backgroundColor: bgColorHex, color: colorHex }}>
-                                      {finding.persona}
-                                    </span>
-                                    {finding.severity && (
-                                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded uppercase tracking-wider font-semibold">
-                                        {finding.severity}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-800 leading-relaxed font-medium">
-                                    {finding.issue}
-                                  </p>
-                                </div>
+                        {/* Tooltip */}
+                        {isHovered && (
+                          <div 
+                            className="absolute bg-white text-gray-900 p-4 rounded-lg shadow-2xl border border-gray-200 w-80 pointer-events-none"
+                            style={{
+                              top: '100%',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              marginTop: '8px'
+                            }}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded" style={{ backgroundColor: bgColorHex, color: colorHex }}>
+                                {finding.persona}
+                              </span>
+                              {finding.severity && (
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded uppercase tracking-wider font-semibold">
+                                  {finding.severity}
+                                </span>
                               )}
                             </div>
-                          );
-                        })}
+                            <p className="text-sm text-gray-800 leading-relaxed font-medium">
+                              {finding.issue}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })}
+                </div>
+              </div>
+            )}
                 </div>
               </>
             )}
