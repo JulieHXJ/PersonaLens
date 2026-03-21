@@ -171,8 +171,8 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
 
           <div className="bg-white rounded-lg shadow-sm border relative overflow-hidden flex flex-col" style={{ minHeight: '800px' }}>
             <div className="w-full flex-1 overflow-auto relative bg-gray-50">
-              {(!screenshotUrl || viewMode === "iframe") && audit.status !== "failed" && (
-                  <div className="absolute inset-0 z-10 bg-white pointer-events-auto">
+              {/* Always keep the iframe around for "Live Website" mode or when loading */}
+              <div className={`absolute inset-0 z-10 bg-white pointer-events-auto ${audit.status === "completed" && viewMode === "highlights" ? 'hidden' : 'block'}`}>
                   <iframe 
                     src={audit.url.startsWith('http') ? audit.url : `https://${audit.url}`} 
                     className="w-full h-full border-0"
@@ -181,7 +181,7 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                   />
                   
                   {/* Loading Overlays - Only show when NOT completed */}
-                  {audit.status !== "completed" && (
+                  {audit.status !== "completed" && audit.status !== "failed" && (
                     <div className="absolute inset-0 flex items-center justify-center flex-col text-gray-800 bg-white/60 backdrop-blur-sm pointer-events-none">
                       <Loader2 className="w-10 h-10 animate-spin mb-3 text-blue-600" />
                       <p className="font-medium text-lg drop-shadow-sm">
@@ -195,7 +195,6 @@ function AuditView({ auditId }: { auditId: Id<"website_audits"> }) {
                     </div>
                   )}
                 </div>
-              )}
                   
                   {audit.simplifiedHtml && audit.status === "completed" && viewMode === "highlights" && (
                       <div className="absolute top-4 left-4 right-4 bg-white/95 backdrop-blur p-4 rounded-md shadow-lg border border-gray-200 text-sm max-h-64 overflow-auto z-10 hidden">
