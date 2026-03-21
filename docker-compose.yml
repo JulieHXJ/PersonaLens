@@ -1,0 +1,16 @@
+services:
+  nightshift:
+    build: .
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - HOSTNAME=0.0.0.0
+      - LOG_DIR=/app/logs
+    volumes:
+      # Persist logs on host for debugging
+      - ./logs:/app/logs
+    restart: unless-stopped

@@ -1,0 +1,42 @@
+{
+  "name": "nightshift",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "playwright test --ignore-pattern=evaluate-website",
+    "test:ui": "playwright test --ui --ignore-pattern=evaluate-website",
+    "test:headed": "playwright test --headed --ignore-pattern=evaluate-website",
+    "test:evaluate": "playwright test tests/evaluate-website.spec.ts --project=chromium",
+    "evaluate": "TARGET_URL=${TARGET_URL:-https://www.kmw-technology.de/hebammen} npm run test:evaluate",
+    "docker:build": "docker build -t nightshift .",
+    "docker:run": "docker run -p 3000:3000 nightshift",
+    "docker:test": "docker compose --profile test run playwright"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "next": "^15.1.0",
+    "openai": "^6.32.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@tailwindcss/forms": "^0.5.9",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "dotenv": "^17.3.1",
+    "eslint": "^9.16.0",
+    "eslint-config-next": "^15.1.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0"
+  }
+}
