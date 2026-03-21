@@ -98,16 +98,18 @@ export default function ProgressPage() {
       // Mark as running
       updated[i] = { ...updated[i], status: "running" };
       setResults([...updated]);
+      // Alternate between desktop and mobile — every 3rd persona tests on mobile
+      const device = i % 3 === 2 ? "mobile" : "desktop";
       addLog(
         "active",
-        `Interview ${i + 1}/${personas.length}: ${persona.name}, ${persona.age}, ${persona.role} — STARTED`
+        `Interview ${i + 1}/${personas.length}: ${persona.name}, ${persona.age}, ${persona.role} — STARTED (${device})`
       );
 
       try {
         const res = await fetch("/api/interview", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ persona, analysis }),
+          body: JSON.stringify({ persona, analysis, device }),
         });
 
         if (!res.ok) {

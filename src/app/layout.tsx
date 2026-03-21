@@ -3,6 +3,7 @@ import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileHeader from "@/components/layout/MobileHeader";
 import MobileNav from "@/components/layout/MobileNav";
+import ThemeProvider from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Nightshift | The Kinetic Observer",
@@ -16,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
@@ -27,13 +28,15 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-background text-on-surface font-body">
-        <Sidebar />
-        <MobileHeader />
-        <main className="lg:ml-64 min-h-screen pb-24 lg:pb-12">
-          {children}
-        </main>
-        <MobileNav />
+      <body className="bg-background text-on-surface font-body transition-colors duration-300">
+        <ThemeProvider>
+          <Sidebar />
+          <MobileHeader />
+          <main className="lg:ml-64 min-h-screen pb-24 lg:pb-12">
+            {children}
+          </main>
+          <MobileNav />
+        </ThemeProvider>
       </body>
     </html>
   );

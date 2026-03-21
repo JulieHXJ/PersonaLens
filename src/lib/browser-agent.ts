@@ -1,7 +1,9 @@
 import { chromium, Browser, Page } from "playwright";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Persona, WebsiteAnalysis } from "./types";
 import { createLogger } from "./logger";
+import { getProvider } from "./llm";
 
 const log = createLogger("agent:browser");
 
@@ -17,8 +19,167 @@ function getOpenAI() {
   return _openai;
 }
 
-const MODEL = "gpt-4.1-mini";
-const MAX_STEPS = 12;
+let _gemini: GoogleGenerativeAI | null = null;
+function getGemini() {
+  if (!_gemini) {
+    _gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+  }
+  return _gemini;
+}
+
+const OPENAI_MODEL = "gpt-4.1-mini";
+
+function getGeminiModel(): string {
+  const provider = getProvider();
+  // Gemini 3 requires thought_signatures for tool-use — use 2.5 for stability
+  return provider === "gemini-pro" ? "gemini-2.5-pro-preview-05-06" : "gemini-2.5-flash";
+}
+
+/**
+ * Provider-aware LLM call. Returns OpenAI-compatible response format.
+ * For Gemini, converts the response to match OpenAI's shape.
+ */
+async function agentLLMCall(
+  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+  tools: OpenAI.Chat.Completions.ChatCompletionTool[],
+  toolChoice: "auto" | { type: "function"; function: { name: string } },
+  maxTokens: number
+) {
+  const provider = getProvider();
+  log.debug(`LLM call using ${provider}`);
+
+  if (provider === "gemini") {
+    try {
+      return await geminiAgentCall(messages, tools, toolChoice, maxTokens);
+    } catch (err) {
+      log.warn(`Gemini call failed, falling back to OpenAI: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  // OpenAI (default or fallback)
+  const response = await getOpenAI().chat.completions.create({
+    model: OPENAI_MODEL,
+    messages,
+    tools,
+    tool_choice: toolChoice,
+    max_tokens: maxTokens,
+  });
+  return response;
+}
+
+async function geminiAgentCall(
+  messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+  tools: OpenAI.Chat.Completions.ChatCompletionTool[],
+  toolChoice: "auto" | { type: "function"; function: { name: string } },
+  maxTokens: number
+): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  const gemini = getGemini();
+  const model = gemini.getGenerativeModel({
+    model: getGeminiModel(),
+    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
+  });
+
+  // Convert system message
+  const systemMsg = messages.filter(m => m.role === "system").map(m => {
+    if (typeof m.content === "string") return m.content;
+    return "";
+  }).join("\n");
+
+  // Convert tools
+  const geminiTools = [{
+    functionDeclarations: tools.filter(t => t.type === "function").map(t => ({
+      name: t.function.name,
+      description: t.function.description,
+      parameters: t.function.parameters,
+    })),
+  }] as unknown as import("@google/generative-ai").Tool[];
+
+  const toolConfig = (typeof toolChoice === "object"
+    ? { functionCallingConfig: { mode: "ANY", allowedFunctionNames: [toolChoice.function.name] } }
+    : { functionCallingConfig: { mode: "AUTO" } }
+  ) as import("@google/generative-ai").ToolConfig;
+
+  // Convert message history (skip system)
+  const history: import("@google/generative-ai").Content[] = [];
+  for (const m of messages) {
+    if (m.role === "system") continue;
+    if (m.role === "user") {
+      const parts: import("@google/generative-ai").Part[] = [];
+      if (typeof m.content === "string") {
+        parts.push({ text: m.content });
+      } else if (Array.isArray(m.content)) {
+        for (const c of m.content as unknown as Record<string, unknown>[]) {
+          if (c.type === "text") parts.push({ text: c.text as string });
+          // Skip images for Gemini — text-only for simplicity
+        }
+      }
+      history.push({ role: "user", parts });
+    } else if (m.role === "assistant") {
+      const am = m as OpenAI.Chat.Completions.ChatCompletionAssistantMessageParam;
+      const parts: import("@google/generative-ai").Part[] = [];
+      if (am.content) parts.push({ text: typeof am.content === "string" ? am.content : "" });
+      if (am.tool_calls) {
+        for (const tc of am.tool_calls) {
+          if (tc.type === "function") {
+            parts.push({ functionCall: { name: tc.function.name, args: JSON.parse(tc.function.arguments || "{}") } });
+          }
+        }
+      }
+      if (parts.length > 0) history.push({ role: "model", parts });
+    } else if (m.role === "tool") {
+      const tm = m as OpenAI.Chat.Completions.ChatCompletionToolMessageParam;
+      const content = typeof tm.content === "string" ? tm.content : JSON.stringify(tm.content);
+      history.push({
+        role: "function" as unknown as "user",
+        parts: [{ functionResponse: { name: tm.tool_call_id || "tool", response: { result: content } } }],
+      });
+    }
+  }
+
+  const chat = model.startChat({
+    history: history.slice(0, -1),
+    systemInstruction: systemMsg ? { role: "user" as const, parts: [{ text: systemMsg }] } : undefined,
+    tools: geminiTools,
+    toolConfig,
+  });
+
+  const lastMsg = history[history.length - 1];
+  const result = await chat.sendMessage(lastMsg?.parts || [{ text: "" }]);
+  const resp = result.response;
+
+  // Convert Gemini response to OpenAI format
+  const functionCalls = resp.functionCalls();
+  const toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] | undefined =
+    functionCalls?.map((fc, i) => ({
+      id: `gemini-${Date.now()}-${i}`,
+      type: "function" as const,
+      function: { name: fc.name, arguments: JSON.stringify(fc.args) },
+    }));
+
+  return {
+    id: `gemini-${Date.now()}`,
+    object: "chat.completion" as const,
+    created: Math.floor(Date.now() / 1000),
+    model: getGeminiModel(),
+    choices: [{
+      index: 0,
+      message: {
+        role: "assistant" as const,
+        content: resp.text() || null,
+        tool_calls: toolCalls?.length ? toolCalls : undefined,
+        refusal: null,
+      },
+      finish_reason: toolCalls?.length ? "tool_calls" as const : "stop" as const,
+      logprobs: null,
+    }],
+    usage: {
+      prompt_tokens: resp.usageMetadata?.promptTokenCount || 0,
+      completion_tokens: resp.usageMetadata?.candidatesTokenCount || 0,
+      total_tokens: resp.usageMetadata?.totalTokenCount || 0,
+    },
+  } as unknown as OpenAI.Chat.Completions.ChatCompletion;
+}
+const MAX_STEPS = 25;
 
 export interface AgentEvent {
   type: "action" | "observation" | "screenshot" | "thinking" | "done" | "error";
@@ -97,13 +258,17 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "fill_input",
       description:
-        "Fill a text input field, textarea, or search box. Use the placeholder text or label to identify the field. Useful for login forms, search bars, etc.",
+        "Fill an input field by its label, placeholder, or type. For login forms: use label='Benutzername' for username and fieldType='password' for password fields.",
       parameters: {
         type: "object",
         properties: {
           placeholder: {
             type: "string",
-            description: "The placeholder text or label near the input field",
+            description: "The label text, placeholder text, or aria-label near the input field",
+          },
+          fieldType: {
+            type: "string",
+            description: "Optional: the HTML input type to target specifically (e.g. 'password', 'email'). Use this when placeholder/label matching fails.",
           },
           value: {
             type: "string",
@@ -330,12 +495,28 @@ async function executeTool(
           const t = (li as HTMLElement).innerText?.trim();
           if (t && t.length > 5) lists.push(`• ${t.substring(0, 150)}`);
         });
+        // Also extract form fields so the agent can interact with them
+        const formFields: string[] = [];
+        document.querySelectorAll("input, textarea, select").forEach((el) => {
+          const input = el as HTMLInputElement;
+          const label = input.labels?.[0]?.innerText?.trim() || "";
+          const ph = input.placeholder || "";
+          const type = input.type || el.tagName.toLowerCase();
+          formFields.push(`[${type}] label="${label}" placeholder="${ph}"`);
+        });
+        const buttons: string[] = [];
+        document.querySelectorAll("button, [role='button'], input[type='submit']").forEach((b) => {
+          const t = (b as HTMLElement).innerText?.trim();
+          if (t) buttons.push(t.substring(0, 80));
+        });
         return {
           title: document.title,
           url: window.location.href,
           headings: headings.slice(0, 15),
           paragraphs: paragraphs.slice(0, 10),
           lists: lists.slice(0, 15),
+          formFields: formFields.slice(0, 10),
+          buttons: buttons.slice(0, 10),
         };
       });
       return { text: JSON.stringify(content, null, 2) };
@@ -381,18 +562,58 @@ async function executeTool(
     case "fill_input": {
       const placeholder = args.placeholder as string;
       const value = args.value as string;
+      const fieldType = args.fieldType as string | undefined;
       emit({
         type: "action",
-        message: `Filling "${placeholder}" with "${value}"`,
+        message: `Filling "${placeholder || fieldType}" with "${value}"`,
         timestamp: new Date().toISOString(),
       });
       try {
-        // Try by placeholder first, then by label
-        const input = page.getByPlaceholder(placeholder, { exact: false }).first();
-        if (await input.isVisible()) {
-          await input.fill(value);
-        } else {
-          await page.getByLabel(placeholder, { exact: false }).first().fill(value);
+        let filled = false;
+        // If fieldType is specified, target by CSS selector directly (e.g. input[type="password"])
+        if (fieldType && !filled) {
+          try {
+            const byType = page.locator(`input[type="${fieldType}"]`).first();
+            if (await byType.isVisible({ timeout: 1000 })) {
+              await byType.fill(value);
+              filled = true;
+            }
+          } catch { /* try next */ }
+        }
+        // Try by label
+        if (placeholder && !filled) {
+          try {
+            const byLabel = page.getByLabel(placeholder, { exact: false }).first();
+            if (await byLabel.isVisible({ timeout: 1000 })) {
+              await byLabel.fill(value);
+              filled = true;
+            }
+          } catch { /* try next */ }
+        }
+        // Then by placeholder
+        if (placeholder && !filled) {
+          try {
+            const byPlaceholder = page.getByPlaceholder(placeholder, { exact: false }).first();
+            if (await byPlaceholder.isVisible({ timeout: 1000 })) {
+              await byPlaceholder.fill(value);
+              filled = true;
+            }
+          } catch { /* try next */ }
+        }
+        // Then by role with name
+        if (placeholder && !filled) {
+          try {
+            const byRole = page.getByRole("textbox", { name: placeholder }).first();
+            if (await byRole.isVisible({ timeout: 1000 })) {
+              await byRole.fill(value);
+              filled = true;
+            }
+          } catch { /* give up */ }
+        }
+        if (!filled) {
+          return {
+            text: `Could not find input "${placeholder || fieldType}". Try extract_page_content to see available form fields.`,
+          };
         }
         const screenshot = await captureScreenshot(page, emit, `Filled "${placeholder}"`);
         return {
@@ -459,7 +680,7 @@ export async function runBrowserAgent(
   const targetPath = parsedTarget.pathname.replace(/\/$/, "");
   const hasPathScope = targetPath.length > 0 && targetPath !== "/";
 
-  log.info(`Starting browser agent`, { targetUrl, allowedOrigin, maxSteps: MAX_STEPS, model: MODEL });
+  log.info(`Starting browser agent`, { targetUrl, allowedOrigin, maxSteps: MAX_STEPS, model: getProvider() === "gemini" ? getGeminiModel() : OPENAI_MODEL });
 
   try {
     emit({
@@ -515,13 +736,13 @@ RULES:
 - When you have enough understanding, call finish_exploration with your analysis.
 
 STRATEGY:
-1. Study the initial page screenshot and content carefully — this IS the page to analyze
-2. If you see a login form with demo/test credentials visible on the page, use fill_input and submit_form to log in and explore the app behind it
-3. Scroll down to see all content below the fold
-4. If there are links to subpages within the same section, visit them
-5. Use extract_page_content for detailed text not visible in screenshots
-6. Pay attention to design quality, branding, CTAs, and user experience
-7. Your analysis should describe THIS specific page/product, not the parent website`,
+1. Study the initial page carefully. If you see a login form with demo/test credentials on the page, LOG IN FIRST using fill_input (use fieldType='password' for password fields) and submit_form.
+2. After logging in, systematically visit EVERY page in the navigation menu.
+3. On each page, scroll down to see all content. Click buttons to discover features.
+4. Look for special features like AI assistants, floating action buttons (bottom-right corner), modals, or interactive elements — TEST THEM.
+5. Try actual workflows: create something, edit something, navigate flows end-to-end.
+6. Use extract_page_content when you need to read detailed text, form fields, or button labels.
+7. Your analysis must cover the FULL product behind the login, not just the login page.`,
       },
       {
         role: "user",
@@ -551,16 +772,14 @@ STRATEGY:
         timestamp: new Date().toISOString(),
       });
 
-      const response = await getOpenAI().chat.completions.create({
-        model: MODEL,
+      const response = await agentLLMCall(
         messages,
-        tools: TOOLS,
-        tool_choice:
-          step >= MAX_STEPS - 1
-            ? { type: "function", function: { name: "finish_exploration" } }
-            : "auto",
-        max_tokens: 1000,
-      });
+        TOOLS,
+        step >= MAX_STEPS - 1
+          ? { type: "function", function: { name: "finish_exploration" } }
+          : "auto",
+        1000
+      );
 
       const assistantMessage = response.choices[0].message;
       const tokensUsed = response.usage;
@@ -689,8 +908,25 @@ Respond with ONLY valid JSON array:
   "selected": boolean (first 8 true, rest false)
 }]`;
 
+  const provider = getProvider();
+
+  if (provider === "gemini") {
+    try {
+      const gemini = getGemini();
+      const model = gemini.getGenerativeModel({ model: getGeminiModel() });
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: "You create realistic customer personas for product research. Respond only with valid JSON.\n\n" + prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4000 },
+      });
+      const geminiText = result.response.text() || "[]";
+      return JSON.parse(geminiText.replace(/```json\n?|```/g, "").trim());
+    } catch (err) {
+      log.warn(`Gemini persona gen failed, falling back to OpenAI: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
   const response = await getOpenAI().chat.completions.create({
-    model: MODEL,
+    model: OPENAI_MODEL,
     messages: [
       {
         role: "system",

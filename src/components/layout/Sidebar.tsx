@@ -2,18 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "@/components/ThemeProvider";
 
 const navItems = [
   { href: "/", icon: "settings_input_component", label: "Configure Run" },
   { href: "/progress", icon: "terminal", label: "Live Progress" },
   { href: "/report", icon: "analytics", label: "Morning Report" },
+  { href: "/settings", icon: "tune", label: "Settings" },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { theme, toggle } = useTheme();
 
   return (
-    <aside className="hidden lg:flex flex-col h-screen fixed left-0 top-0 border-r border-[#404753]/10 bg-[#1B1B1E] w-64 z-50 shadow-[40px_0_40px_-20px_rgba(164,201,255,0.06)]">
+    <aside className="hidden lg:flex flex-col h-screen fixed left-0 top-0 border-r border-outline-variant/10 bg-[var(--sidebar-bg)] w-64 z-50 shadow-[40px_0_40px_-20px_rgba(164,201,255,0.06)]">
       <div className="px-6 py-8">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
@@ -25,7 +28,7 @@ export default function Sidebar() {
             <h1 className="text-lg font-black text-[#A4C9FF] font-headline uppercase tracking-tighter">
               Nightshift
             </h1>
-            <p className="text-[10px] text-on-surface-variant font-mono uppercase tracking-widest">
+            <p className="text-[10px] text-[var(--on-surface-variant)] font-mono uppercase tracking-widest">
               The Kinetic Observer
             </p>
           </div>
@@ -41,8 +44,8 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 font-mono text-sm ${
                 isActive
-                  ? "bg-[#2A2A2D] text-[#A4C9FF] border-r-2 border-[#A4C9FF] translate-x-1"
-                  : "text-[#C0C7D5] hover:bg-[#1F1F22]"
+                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] border-r-2 border-[var(--sidebar-active-text)] translate-x-1"
+                  : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-active-bg)]"
               }`}
             >
               <span className="material-symbols-outlined">{item.icon}</span>
@@ -58,9 +61,19 @@ export default function Sidebar() {
           New Analysis
         </button>
         <div className="space-y-1">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggle}
+            className="flex items-center gap-3 px-4 py-2 text-[var(--sidebar-text)] hover:bg-[var(--sidebar-active-bg)] text-xs font-mono w-full rounded transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">
+              {theme === "dark" ? "light_mode" : "dark_mode"}
+            </span>
+            <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+          </button>
           <a
             href="#"
-            className="flex items-center gap-3 px-4 py-2 text-[#C0C7D5] hover:bg-[#1F1F22] text-xs font-mono"
+            className="flex items-center gap-3 px-4 py-2 text-[var(--sidebar-text)] hover:bg-[var(--sidebar-active-bg)] text-xs font-mono"
           >
             <span className="material-symbols-outlined text-sm">
               description
@@ -69,7 +82,7 @@ export default function Sidebar() {
           </a>
           <a
             href="#"
-            className="flex items-center gap-3 px-4 py-2 text-[#C0C7D5] hover:bg-[#1F1F22] text-xs font-mono"
+            className="flex items-center gap-3 px-4 py-2 text-[var(--sidebar-text)] hover:bg-[var(--sidebar-active-bg)] text-xs font-mono"
           >
             <span className="material-symbols-outlined text-sm">
               help_outline
