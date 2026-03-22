@@ -33,6 +33,7 @@ Provide a strict, valid JSON response that matches the required schema perfectly
 
 export function buildUserPrompt(data: ExtractedWebsiteData): string {
   // We limit the amount of text to avoid blowing up context window unnecessarily
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const truncate = (arr: any[], limit: number) => arr.slice(0, limit);
 
   return `

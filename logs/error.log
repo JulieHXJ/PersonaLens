@@ -1,0 +1,199 @@
+[2026-03-21T19:49:40.951Z] [ERROR] [agent:browser] Agent failed for https://www.karrieretag-familienunternehmen.de {
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 116781
+}
+[2026-03-21T19:49:40.954Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://www.karrieretag-familienunternehmen.de",
+  "eventCount": 17,
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T19:53:28.002Z] [ERROR] [agent:browser] Agent failed for https://www.google.com {
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 6996
+}
+[2026-03-21T19:53:28.005Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://www.google.com",
+  "eventCount": 7,
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T19:56:38.023Z] [ERROR] [agent:browser] Agent failed for https://google.com {
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 7431
+}
+[2026-03-21T19:56:38.025Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://google.com",
+  "eventCount": 7,
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T19:57:03.110Z] [ERROR] [agent:persona-tester] Persona test failed: Maria Schmidt {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:03.112Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:07.540Z] [ERROR] [agent:persona-tester] Persona test failed: Sarah Weber {
+  "error": "400 status code (no body)"
+}
+[2026-03-21T19:57:07.542Z] [ERROR] [api:interview] Interview failed {
+  "error": "400 status code (no body)"
+}
+[2026-03-21T19:57:10.645Z] [ERROR] [agent:persona-tester] Persona test failed: Maria Schmidt {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:10.648Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:12.404Z] [ERROR] [agent:persona-tester] Persona test failed: Tom Richter {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:12.407Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:15.231Z] [ERROR] [agent:persona-tester] Persona test failed: Sarah Weber {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:15.234Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:17.133Z] [ERROR] [agent:persona-tester] Persona test failed: Ayşe Yılmaz {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:17.136Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:19.846Z] [ERROR] [agent:persona-tester] Persona test failed: Tom Richter {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:19.848Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:21.847Z] [ERROR] [agent:persona-tester] Persona test failed: Lena Bauer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:21.850Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:24.540Z] [ERROR] [agent:persona-tester] Persona test failed: Ayşe Yılmaz {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:24.543Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:26.730Z] [ERROR] [agent:persona-tester] Persona test failed: Julia Fischer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:26.732Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:29.440Z] [ERROR] [agent:persona-tester] Persona test failed: Lena Bauer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:29.442Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:31.435Z] [ERROR] [agent:persona-tester] Persona test failed: Claudia Müller {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:31.437Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:34.193Z] [ERROR] [agent:persona-tester] Persona test failed: Julia Fischer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:34.195Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:36.068Z] [ERROR] [agent:persona-tester] Persona test failed: Nina Hoffmann {
+  "error": "400 status code (no body)"
+}
+[2026-03-21T19:57:36.069Z] [ERROR] [api:interview] Interview failed {
+  "error": "400 status code (no body)"
+}
+[2026-03-21T19:57:38.770Z] [ERROR] [agent:persona-tester] Persona test failed: Claudia Müller {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:38.773Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:43.235Z] [ERROR] [agent:persona-tester] Persona test failed: Nina Hoffmann {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:43.296Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:03:37.602Z] [ERROR] [agent:browser] Agent failed for https://www.kmw-technology.de/hebammen {
+  "error": "429 status code (no body)",
+  "stack": "Error: 429 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:3115)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 5359
+}
+[2026-03-21T20:03:37.604Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://www.kmw-technology.de/hebammen",
+  "eventCount": 4,
+  "error": "429 status code (no body)",
+  "stack": "Error: 429 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:3115)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T20:07:55.476Z] [ERROR] [agent:browser] Agent failed for https://www.kmw-technology.de/hebammen {
+  "error": "429 status code (no body)",
+  "stack": "Error: 429 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:3115)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 5586
+}
+[2026-03-21T20:07:55.479Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://www.kmw-technology.de/hebammen",
+  "eventCount": 4,
+  "error": "429 status code (no body)",
+  "stack": "Error: 429 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:3115)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T20:08:21.919Z] [ERROR] [agent:persona-tester] Persona test failed: Maria Schmidt {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:21.921Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:26.815Z] [ERROR] [agent:persona-tester] Persona test failed: Sarah Weber {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:26.818Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:31.602Z] [ERROR] [agent:persona-tester] Persona test failed: Tom Richter {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:31.605Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:36.375Z] [ERROR] [agent:persona-tester] Persona test failed: Ayşe Yılmaz {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:36.377Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:41.102Z] [ERROR] [agent:persona-tester] Persona test failed: Lena Bauer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:41.104Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:46.100Z] [ERROR] [agent:persona-tester] Persona test failed: Julia Fischer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:46.103Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:50.947Z] [ERROR] [agent:persona-tester] Persona test failed: Claudia Müller {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:50.949Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:55.965Z] [ERROR] [agent:persona-tester] Persona test failed: Nina Hoffmann {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:55.968Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}

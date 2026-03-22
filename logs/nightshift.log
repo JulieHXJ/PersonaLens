@@ -1,0 +1,619 @@
+[2026-03-21T19:47:44.154Z] [INFO ] [api:explore] [Step: init] Starting explore request
+[2026-03-21T19:47:44.157Z] [INFO ] [api:explore] [Step: parse_body] Reading request text
+[2026-03-21T19:47:44.161Z] [INFO ] [api:explore] [Step: parse_body] Request text read: {
+  "rawBody": "{\"url\":\"https://www.karrieretag-familienunternehmen.de\"}"
+}
+[2026-03-21T19:47:44.162Z] [INFO ] [api:explore] [Step: parse_body] Body parsed successfully
+[2026-03-21T19:47:44.163Z] [INFO ] [api:explore] [Step: log_info] Explore request data {
+  "url": "https://www.karrieretag-familienunternehmen.de",
+  "rawBody": "{\"url\":\"https://www.karrieretag-familienunternehmen.de\"}",
+  "hasGeminiEnv": true
+}
+[2026-03-21T19:47:44.164Z] [INFO ] [api:explore] [Step: validate_url] Validating url presence
+[2026-03-21T19:47:44.165Z] [INFO ] [api:explore] [Step: validate_url] Checking if URL is valid format
+[2026-03-21T19:47:44.166Z] [INFO ] [api:explore] [Step: validate_url] URL is valid
+[2026-03-21T19:47:44.167Z] [INFO ] [api:explore] [Step: setup_stream] Setting up stream
+[2026-03-21T19:47:44.168Z] [INFO ] [api:explore] [Step: run_browser_agent] Calling runBrowserAgent
+[2026-03-21T19:47:44.172Z] [INFO ] [agent:browser] Starting browser agent {
+  "targetUrl": "https://www.karrieretag-familienunternehmen.de",
+  "allowedOrigin": "https://www.karrieretag-familienunternehmen.de",
+  "maxSteps": 25,
+  "model": "gemini-2.5-flash"
+}
+[2026-03-21T19:47:48.319Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:47:50.727Z] [DEBUG] [agent:browser] LLM response (step 1) {
+  "toolCalls": [
+    "click_element"
+  ],
+  "tokensUsed": {
+    "completion_tokens": 17,
+    "prompt_tokens": 1830,
+    "total_tokens": 1883
+  }
+}
+[2026-03-21T19:47:50.730Z] [DEBUG] [agent:browser] Tool call: click_element {
+  "text": "Cookies zulassen"
+}
+[2026-03-21T19:48:00.830Z] [INFO ] [agent:browser] Tool click_element completed (10099ms) {
+  "hasScreenshot": false,
+  "resultLength": 102
+}
+[2026-03-21T19:48:00.834Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:48:02.105Z] [DEBUG] [agent:browser] LLM response (step 2) {
+  "toolCalls": [
+    "click_element"
+  ],
+  "tokensUsed": {
+    "completion_tokens": 18,
+    "prompt_tokens": 1884,
+    "total_tokens": 1964
+  }
+}
+[2026-03-21T19:48:02.108Z] [DEBUG] [agent:browser] Tool call: click_element {
+  "text": "Nur notwendige Cookies"
+}
+[2026-03-21T19:48:31.799Z] [INFO ] [agent:browser] Tool click_element completed (29691ms) {
+  "hasScreenshot": false,
+  "resultLength": 108
+}
+[2026-03-21T19:48:31.809Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:48:33.101Z] [DEBUG] [agent:browser] LLM response (step 3) {
+  "toolCalls": [
+    "click_element"
+  ],
+  "tokensUsed": {
+    "completion_tokens": 18,
+    "prompt_tokens": 1940,
+    "total_tokens": 2010
+  }
+}
+[2026-03-21T19:48:33.105Z] [DEBUG] [agent:browser] Tool call: click_element {
+  "text": "Auswahl erlauben"
+}
+[2026-03-21T19:49:02.803Z] [INFO ] [agent:browser] Tool click_element completed (29698ms) {
+  "hasScreenshot": false,
+  "resultLength": 102
+}
+[2026-03-21T19:49:02.810Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:49:04.413Z] [DEBUG] [agent:browser] LLM response (step 4) {
+  "toolCalls": [
+    "extract_page_content"
+  ],
+  "tokensUsed": {
+    "completion_tokens": 12,
+    "prompt_tokens": 1996,
+    "prompt_tokens_details": {
+      "cached_tokens": 1524
+    },
+    "total_tokens": 2063
+  }
+}
+[2026-03-21T19:49:04.414Z] [DEBUG] [agent:browser] Tool call: extract_page_content {}
+[2026-03-21T19:49:04.432Z] [INFO ] [agent:browser] Tool extract_page_content completed (18ms) {
+  "hasScreenshot": false,
+  "resultLength": 4598
+}
+[2026-03-21T19:49:04.437Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:49:06.790Z] [DEBUG] [agent:browser] LLM response (step 5) {
+  "toolCalls": [
+    "click_element"
+  ],
+  "tokensUsed": {
+    "completion_tokens": 17,
+    "prompt_tokens": 3415,
+    "prompt_tokens_details": {
+      "cached_tokens": 1923
+    },
+    "total_tokens": 3594
+  }
+}
+[2026-03-21T19:49:06.793Z] [DEBUG] [agent:browser] Tool call: click_element {
+  "text": "Cookies zulassen"
+}
+[2026-03-21T19:49:36.500Z] [INFO ] [agent:browser] Tool click_element completed (29707ms) {
+  "hasScreenshot": false,
+  "resultLength": 102
+}
+[2026-03-21T19:49:36.513Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:49:37.985Z] [DEBUG] [agent:browser] LLM response (step 6) {
+  "toolCalls": [
+    "click_element"
+  ],
+  "tokensUsed": {
+    "completion_tokens": 17,
+    "prompt_tokens": 3469,
+    "total_tokens": 3580
+  }
+}
+[2026-03-21T19:49:37.987Z] [DEBUG] [agent:browser] Tool call: click_element {
+  "text": "Ablauf"
+}
+[2026-03-21T19:49:40.618Z] [INFO ] [agent:browser] Tool click_element completed (2631ms) {
+  "hasScreenshot": true,
+  "resultLength": 158
+}
+[2026-03-21T19:49:40.620Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:49:40.951Z] [ERROR] [agent:browser] Agent failed for https://www.karrieretag-familienunternehmen.de {
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 116781
+}
+[2026-03-21T19:49:40.954Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://www.karrieretag-familienunternehmen.de",
+  "eventCount": 17,
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T19:49:40.955Z] [INFO ] [api:explore] [Step: close_stream] Closing stream
+[2026-03-21T19:53:20.992Z] [INFO ] [api:explore] [Step: init] Starting explore request
+[2026-03-21T19:53:20.996Z] [INFO ] [api:explore] [Step: parse_body] Reading request text
+[2026-03-21T19:53:21.000Z] [INFO ] [api:explore] [Step: parse_body] Request text read: {
+  "rawBody": "{\"url\":\"https://www.google.com\"}"
+}
+[2026-03-21T19:53:21.001Z] [INFO ] [api:explore] [Step: parse_body] Body parsed successfully
+[2026-03-21T19:53:21.002Z] [INFO ] [api:explore] [Step: log_info] Explore request data {
+  "url": "https://www.google.com",
+  "rawBody": "{\"url\":\"https://www.google.com\"}",
+  "hasGeminiEnv": true
+}
+[2026-03-21T19:53:21.003Z] [INFO ] [api:explore] [Step: validate_url] Validating url presence
+[2026-03-21T19:53:21.003Z] [INFO ] [api:explore] [Step: validate_url] Checking if URL is valid format
+[2026-03-21T19:53:21.004Z] [INFO ] [api:explore] [Step: validate_url] URL is valid
+[2026-03-21T19:53:21.004Z] [INFO ] [api:explore] [Step: setup_stream] Setting up stream
+[2026-03-21T19:53:21.005Z] [INFO ] [api:explore] [Step: run_browser_agent] Calling runBrowserAgent
+[2026-03-21T19:53:21.006Z] [INFO ] [agent:browser] Starting browser agent {
+  "targetUrl": "https://www.google.com",
+  "allowedOrigin": "https://www.google.com",
+  "maxSteps": 25,
+  "model": "gemini-2.5-flash"
+}
+[2026-03-21T19:53:25.261Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:53:26.841Z] [DEBUG] [agent:browser] LLM response (step 1) {
+  "toolCalls": [
+    "click_element"
+  ],
+  "tokensUsed": {
+    "completion_tokens": 17,
+    "prompt_tokens": 1416,
+    "total_tokens": 1471
+  }
+}
+[2026-03-21T19:53:26.842Z] [DEBUG] [agent:browser] Tool call: click_element {
+  "text": "Alle akzeptieren"
+}
+[2026-03-21T19:53:27.766Z] [INFO ] [agent:browser] Tool click_element completed (924ms) {
+  "hasScreenshot": true,
+  "resultLength": 104
+}
+[2026-03-21T19:53:27.768Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:53:28.002Z] [ERROR] [agent:browser] Agent failed for https://www.google.com {
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 6996
+}
+[2026-03-21T19:53:28.005Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://www.google.com",
+  "eventCount": 7,
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T19:53:28.006Z] [INFO ] [api:explore] [Step: close_stream] Closing stream
+[2026-03-21T19:56:30.563Z] [INFO ] [api:explore] [Step: init] Starting explore request
+[2026-03-21T19:56:30.566Z] [INFO ] [api:explore] [Step: parse_body] Reading request text
+[2026-03-21T19:56:30.570Z] [INFO ] [api:explore] [Step: parse_body] Request text read: {
+  "rawBody": "{\"url\":\"https://google.com\"}"
+}
+[2026-03-21T19:56:30.572Z] [INFO ] [api:explore] [Step: parse_body] Body parsed successfully
+[2026-03-21T19:56:30.573Z] [INFO ] [api:explore] [Step: log_info] Explore request data {
+  "url": "https://google.com",
+  "rawBody": "{\"url\":\"https://google.com\"}",
+  "hasGeminiEnv": true
+}
+[2026-03-21T19:56:30.575Z] [INFO ] [api:explore] [Step: validate_url] Validating url presence
+[2026-03-21T19:56:30.576Z] [INFO ] [api:explore] [Step: validate_url] Checking if URL is valid format
+[2026-03-21T19:56:30.581Z] [INFO ] [api:explore] [Step: validate_url] URL is valid
+[2026-03-21T19:56:30.587Z] [INFO ] [api:explore] [Step: setup_stream] Setting up stream
+[2026-03-21T19:56:30.590Z] [INFO ] [api:explore] [Step: run_browser_agent] Calling runBrowserAgent
+[2026-03-21T19:56:30.595Z] [INFO ] [agent:browser] Starting browser agent {
+  "targetUrl": "https://google.com",
+  "allowedOrigin": "https://google.com",
+  "maxSteps": 25,
+  "model": "gemini-2.5-flash"
+}
+[2026-03-21T19:56:35.163Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:56:36.775Z] [DEBUG] [agent:browser] LLM response (step 1) {
+  "toolCalls": [
+    "click_element"
+  ],
+  "tokensUsed": {
+    "completion_tokens": 17,
+    "prompt_tokens": 1410,
+    "total_tokens": 1464
+  }
+}
+[2026-03-21T19:56:36.778Z] [DEBUG] [agent:browser] Tool call: click_element {
+  "text": "Alle akzeptieren"
+}
+[2026-03-21T19:56:37.723Z] [INFO ] [agent:browser] Tool click_element completed (945ms) {
+  "hasScreenshot": true,
+  "resultLength": 104
+}
+[2026-03-21T19:56:37.725Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T19:56:38.023Z] [ERROR] [agent:browser] Agent failed for https://google.com {
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 7431
+}
+[2026-03-21T19:56:38.025Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://google.com",
+  "eventCount": 7,
+  "error": "400 status code (no body)",
+  "stack": "Error: 400 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:2971)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T19:56:38.026Z] [INFO ] [api:explore] [Step: close_stream] Closing stream
+[2026-03-21T19:56:58.096Z] [INFO ] [api:interview] Interview request: Maria Schmidt testing Hebammen-Service Platform on desktop
+[2026-03-21T19:56:58.099Z] [INFO ] [agent:persona-tester] Starting persona test: Maria Schmidt (desktop) {
+  "personaId": "p1",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:03.110Z] [ERROR] [agent:persona-tester] Persona test failed: Maria Schmidt {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:03.112Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:03.124Z] [INFO ] [api:interview] Interview request: Sarah Weber testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:03.126Z] [INFO ] [agent:persona-tester] Starting persona test: Sarah Weber (desktop) {
+  "personaId": "p2",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:05.904Z] [INFO ] [api:interview] Interview request: Maria Schmidt testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:05.906Z] [INFO ] [agent:persona-tester] Starting persona test: Maria Schmidt (desktop) {
+  "personaId": "p1",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:07.150Z] [DEBUG] [agent:persona-tester] Sarah Weber tool: fill_input {
+  "value": "demo",
+  "placeholder": "Benutzername"
+}
+[2026-03-21T19:57:07.540Z] [ERROR] [agent:persona-tester] Persona test failed: Sarah Weber {
+  "error": "400 status code (no body)"
+}
+[2026-03-21T19:57:07.542Z] [ERROR] [api:interview] Interview failed {
+  "error": "400 status code (no body)"
+}
+[2026-03-21T19:57:07.550Z] [INFO ] [api:interview] Interview request: Tom Richter testing Hebammen-Service Platform on mobile
+[2026-03-21T19:57:07.551Z] [INFO ] [agent:persona-tester] Starting persona test: Tom Richter (mobile) {
+  "personaId": "p3",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "mobile"
+}
+[2026-03-21T19:57:10.645Z] [ERROR] [agent:persona-tester] Persona test failed: Maria Schmidt {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:10.648Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:10.660Z] [INFO ] [api:interview] Interview request: Sarah Weber testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:10.662Z] [INFO ] [agent:persona-tester] Starting persona test: Sarah Weber (desktop) {
+  "personaId": "p2",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:12.404Z] [ERROR] [agent:persona-tester] Persona test failed: Tom Richter {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:12.407Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:12.421Z] [INFO ] [api:interview] Interview request: Ayşe Yılmaz testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:12.430Z] [INFO ] [agent:persona-tester] Starting persona test: Ayşe Yılmaz (desktop) {
+  "personaId": "p4",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:15.231Z] [ERROR] [agent:persona-tester] Persona test failed: Sarah Weber {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:15.234Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:15.245Z] [INFO ] [api:interview] Interview request: Tom Richter testing Hebammen-Service Platform on mobile
+[2026-03-21T19:57:15.247Z] [INFO ] [agent:persona-tester] Starting persona test: Tom Richter (mobile) {
+  "personaId": "p3",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "mobile"
+}
+[2026-03-21T19:57:17.133Z] [ERROR] [agent:persona-tester] Persona test failed: Ayşe Yılmaz {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:17.136Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:17.144Z] [INFO ] [api:interview] Interview request: Lena Bauer testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:17.149Z] [INFO ] [agent:persona-tester] Starting persona test: Lena Bauer (desktop) {
+  "personaId": "p5",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:19.846Z] [ERROR] [agent:persona-tester] Persona test failed: Tom Richter {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:19.848Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:19.858Z] [INFO ] [api:interview] Interview request: Ayşe Yılmaz testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:19.862Z] [INFO ] [agent:persona-tester] Starting persona test: Ayşe Yılmaz (desktop) {
+  "personaId": "p4",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:21.847Z] [ERROR] [agent:persona-tester] Persona test failed: Lena Bauer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:21.850Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:21.858Z] [INFO ] [api:interview] Interview request: Julia Fischer testing Hebammen-Service Platform on mobile
+[2026-03-21T19:57:21.859Z] [INFO ] [agent:persona-tester] Starting persona test: Julia Fischer (mobile) {
+  "personaId": "p6",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "mobile"
+}
+[2026-03-21T19:57:24.540Z] [ERROR] [agent:persona-tester] Persona test failed: Ayşe Yılmaz {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:24.543Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:24.553Z] [INFO ] [api:interview] Interview request: Lena Bauer testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:24.554Z] [INFO ] [agent:persona-tester] Starting persona test: Lena Bauer (desktop) {
+  "personaId": "p5",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:26.730Z] [ERROR] [agent:persona-tester] Persona test failed: Julia Fischer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:26.732Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:26.743Z] [INFO ] [api:interview] Interview request: Claudia Müller testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:26.743Z] [INFO ] [agent:persona-tester] Starting persona test: Claudia Müller (desktop) {
+  "personaId": "p7",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:29.440Z] [ERROR] [agent:persona-tester] Persona test failed: Lena Bauer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:29.442Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:29.453Z] [INFO ] [api:interview] Interview request: Julia Fischer testing Hebammen-Service Platform on mobile
+[2026-03-21T19:57:29.455Z] [INFO ] [agent:persona-tester] Starting persona test: Julia Fischer (mobile) {
+  "personaId": "p6",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "mobile"
+}
+[2026-03-21T19:57:31.435Z] [ERROR] [agent:persona-tester] Persona test failed: Claudia Müller {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:31.437Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:31.448Z] [INFO ] [api:interview] Interview request: Nina Hoffmann testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:31.449Z] [INFO ] [agent:persona-tester] Starting persona test: Nina Hoffmann (desktop) {
+  "personaId": "p8",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:34.193Z] [ERROR] [agent:persona-tester] Persona test failed: Julia Fischer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:34.195Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:34.203Z] [INFO ] [api:interview] Interview request: Claudia Müller testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:34.204Z] [INFO ] [agent:persona-tester] Starting persona test: Claudia Müller (desktop) {
+  "personaId": "p7",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:35.816Z] [DEBUG] [agent:persona-tester] Nina Hoffmann tool: fill_input {
+  "value": "demo",
+  "placeholder": "Benutzername"
+}
+[2026-03-21T19:57:36.068Z] [ERROR] [agent:persona-tester] Persona test failed: Nina Hoffmann {
+  "error": "400 status code (no body)"
+}
+[2026-03-21T19:57:36.069Z] [ERROR] [api:interview] Interview failed {
+  "error": "400 status code (no body)"
+}
+[2026-03-21T19:57:38.770Z] [ERROR] [agent:persona-tester] Persona test failed: Claudia Müller {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:38.773Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:38.782Z] [INFO ] [api:interview] Interview request: Nina Hoffmann testing Hebammen-Service Platform on desktop
+[2026-03-21T19:57:38.783Z] [INFO ] [agent:persona-tester] Starting persona test: Nina Hoffmann (desktop) {
+  "personaId": "p8",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T19:57:43.235Z] [ERROR] [agent:persona-tester] Persona test failed: Nina Hoffmann {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T19:57:43.296Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:03:32.235Z] [INFO ] [api:explore] [Step: init] Starting explore request
+[2026-03-21T20:03:32.237Z] [INFO ] [api:explore] [Step: parse_body] Reading request text
+[2026-03-21T20:03:32.239Z] [INFO ] [api:explore] [Step: parse_body] Request text read: {
+  "rawBody": "{\"url\":\"https://www.kmw-technology.de/hebammen\"}"
+}
+[2026-03-21T20:03:32.240Z] [INFO ] [api:explore] [Step: parse_body] Body parsed successfully
+[2026-03-21T20:03:32.240Z] [INFO ] [api:explore] [Step: log_info] Explore request data {
+  "url": "https://www.kmw-technology.de/hebammen",
+  "rawBody": "{\"url\":\"https://www.kmw-technology.de/hebammen\"}",
+  "hasGeminiEnv": true
+}
+[2026-03-21T20:03:32.241Z] [INFO ] [api:explore] [Step: validate_url] Validating url presence
+[2026-03-21T20:03:32.241Z] [INFO ] [api:explore] [Step: validate_url] Checking if URL is valid format
+[2026-03-21T20:03:32.242Z] [INFO ] [api:explore] [Step: validate_url] URL is valid
+[2026-03-21T20:03:32.242Z] [INFO ] [api:explore] [Step: setup_stream] Setting up stream
+[2026-03-21T20:03:32.243Z] [INFO ] [api:explore] [Step: run_browser_agent] Calling runBrowserAgent
+[2026-03-21T20:03:32.244Z] [INFO ] [agent:browser] Starting browser agent {
+  "targetUrl": "https://www.kmw-technology.de/hebammen",
+  "allowedOrigin": "https://www.kmw-technology.de",
+  "maxSteps": 25,
+  "model": "gemini-2.5-flash"
+}
+[2026-03-21T20:03:35.087Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T20:03:37.602Z] [ERROR] [agent:browser] Agent failed for https://www.kmw-technology.de/hebammen {
+  "error": "429 status code (no body)",
+  "stack": "Error: 429 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:3115)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 5359
+}
+[2026-03-21T20:03:37.604Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://www.kmw-technology.de/hebammen",
+  "eventCount": 4,
+  "error": "429 status code (no body)",
+  "stack": "Error: 429 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:3115)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T20:03:37.605Z] [INFO ] [api:explore] [Step: close_stream] Closing stream
+[2026-03-21T20:07:49.878Z] [INFO ] [api:explore] [Step: init] Starting explore request
+[2026-03-21T20:07:49.881Z] [INFO ] [api:explore] [Step: parse_body] Reading request text
+[2026-03-21T20:07:49.882Z] [INFO ] [api:explore] [Step: parse_body] Request text read: {
+  "rawBody": "{\"url\":\"https://www.kmw-technology.de/hebammen\"}"
+}
+[2026-03-21T20:07:49.883Z] [INFO ] [api:explore] [Step: parse_body] Body parsed successfully
+[2026-03-21T20:07:49.884Z] [INFO ] [api:explore] [Step: log_info] Explore request data {
+  "url": "https://www.kmw-technology.de/hebammen",
+  "rawBody": "{\"url\":\"https://www.kmw-technology.de/hebammen\"}",
+  "hasGeminiEnv": true
+}
+[2026-03-21T20:07:49.885Z] [INFO ] [api:explore] [Step: validate_url] Validating url presence
+[2026-03-21T20:07:49.886Z] [INFO ] [api:explore] [Step: validate_url] Checking if URL is valid format
+[2026-03-21T20:07:49.886Z] [INFO ] [api:explore] [Step: validate_url] URL is valid
+[2026-03-21T20:07:49.887Z] [INFO ] [api:explore] [Step: setup_stream] Setting up stream
+[2026-03-21T20:07:49.889Z] [INFO ] [api:explore] [Step: run_browser_agent] Calling runBrowserAgent
+[2026-03-21T20:07:49.892Z] [INFO ] [agent:browser] Starting browser agent {
+  "targetUrl": "https://www.kmw-technology.de/hebammen",
+  "allowedOrigin": "https://www.kmw-technology.de",
+  "maxSteps": 25,
+  "model": "gemini-2.5-flash"
+}
+[2026-03-21T20:07:52.748Z] [DEBUG] [agent:browser] LLM call using gemini-2.5-flash
+[2026-03-21T20:07:55.476Z] [ERROR] [agent:browser] Agent failed for https://www.kmw-technology.de/hebammen {
+  "error": "429 status code (no body)",
+  "stack": "Error: 429 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:3115)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)",
+  "durationMs": 5586
+}
+[2026-03-21T20:07:55.479Z] [ERROR] [api:explore] [Step: run_browser_agent] Explore failed in stream {
+  "url": "https://www.kmw-technology.de/hebammen",
+  "eventCount": 4,
+  "error": "429 status code (no body)",
+  "stack": "Error: 429 status code (no body)\n    at aJ.generate (/app/.next/server/chunks/472.js:1:3115)\n    at dl.makeStatusError (/app/.next/server/chunks/472.js:8:55143)\n    at dl.makeRequest (/app/.next/server/chunks/472.js:8:58569)\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async o (/app/.next/server/app/api/explore/route.js:32:279)\n    at async Object.start (/app/.next/server/app/api/explore/route.js:1:8194)"
+}
+[2026-03-21T20:07:55.481Z] [INFO ] [api:explore] [Step: close_stream] Closing stream
+[2026-03-21T20:08:16.814Z] [INFO ] [api:interview] Interview request: Maria Schmidt testing Hebammen-Service Platform on desktop
+[2026-03-21T20:08:16.816Z] [INFO ] [agent:persona-tester] Starting persona test: Maria Schmidt (desktop) {
+  "personaId": "p1",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T20:08:21.919Z] [ERROR] [agent:persona-tester] Persona test failed: Maria Schmidt {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:21.921Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:21.930Z] [INFO ] [api:interview] Interview request: Sarah Weber testing Hebammen-Service Platform on desktop
+[2026-03-21T20:08:21.930Z] [INFO ] [agent:persona-tester] Starting persona test: Sarah Weber (desktop) {
+  "personaId": "p2",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T20:08:26.815Z] [ERROR] [agent:persona-tester] Persona test failed: Sarah Weber {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:26.818Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:26.830Z] [INFO ] [api:interview] Interview request: Tom Richter testing Hebammen-Service Platform on mobile
+[2026-03-21T20:08:26.831Z] [INFO ] [agent:persona-tester] Starting persona test: Tom Richter (mobile) {
+  "personaId": "p3",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "mobile"
+}
+[2026-03-21T20:08:31.602Z] [ERROR] [agent:persona-tester] Persona test failed: Tom Richter {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:31.605Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:31.614Z] [INFO ] [api:interview] Interview request: Ayşe Yılmaz testing Hebammen-Service Platform on desktop
+[2026-03-21T20:08:31.615Z] [INFO ] [agent:persona-tester] Starting persona test: Ayşe Yılmaz (desktop) {
+  "personaId": "p4",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T20:08:36.375Z] [ERROR] [agent:persona-tester] Persona test failed: Ayşe Yılmaz {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:36.377Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:36.386Z] [INFO ] [api:interview] Interview request: Lena Bauer testing Hebammen-Service Platform on desktop
+[2026-03-21T20:08:36.387Z] [INFO ] [agent:persona-tester] Starting persona test: Lena Bauer (desktop) {
+  "personaId": "p5",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T20:08:41.102Z] [ERROR] [agent:persona-tester] Persona test failed: Lena Bauer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:41.104Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:41.116Z] [INFO ] [api:interview] Interview request: Julia Fischer testing Hebammen-Service Platform on mobile
+[2026-03-21T20:08:41.119Z] [INFO ] [agent:persona-tester] Starting persona test: Julia Fischer (mobile) {
+  "personaId": "p6",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "mobile"
+}
+[2026-03-21T20:08:46.100Z] [ERROR] [agent:persona-tester] Persona test failed: Julia Fischer {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:46.103Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:46.112Z] [INFO ] [api:interview] Interview request: Claudia Müller testing Hebammen-Service Platform on desktop
+[2026-03-21T20:08:46.113Z] [INFO ] [agent:persona-tester] Starting persona test: Claudia Müller (desktop) {
+  "personaId": "p7",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T20:08:50.947Z] [ERROR] [agent:persona-tester] Persona test failed: Claudia Müller {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:50.949Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:50.958Z] [INFO ] [api:interview] Interview request: Nina Hoffmann testing Hebammen-Service Platform on desktop
+[2026-03-21T20:08:50.968Z] [INFO ] [agent:persona-tester] Starting persona test: Nina Hoffmann (desktop) {
+  "personaId": "p8",
+  "url": "https://www.kmw-technology.de/hebammen",
+  "device": "desktop"
+}
+[2026-03-21T20:08:55.965Z] [ERROR] [agent:persona-tester] Persona test failed: Nina Hoffmann {
+  "error": "429 status code (no body)"
+}
+[2026-03-21T20:08:55.968Z] [ERROR] [api:interview] Interview failed {
+  "error": "429 status code (no body)"
+}
