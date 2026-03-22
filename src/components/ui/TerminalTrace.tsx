@@ -175,8 +175,8 @@ export function TerminalTrace({ events = [] }: TerminalTraceProps) {
               <span className="font-bold">{event.data.generatedCount}</span>
             </div>
             <div>
-              <div className="text-sm font-semibold text-slate-200">Synthetic Users Generated</div>
-              <div className="text-xs text-slate-400">Based on evidence boundaries and detected audience clues.</div>
+              <div className="text-sm font-semibold text-slate-200">Customer Personas Generated</div>
+              <div className="text-xs text-slate-400">Review and select personas before starting synthetic user simulation.</div>
             </div>
           </div>
         );

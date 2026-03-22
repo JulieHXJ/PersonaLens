@@ -26,6 +26,7 @@ export default function Home() {
   const [stage, setStage] = useState<AppStage>("idle");
   const [view, setView] = useState<AppView>("workspace");
   const [currentUrl, setCurrentUrl] = useState<string>("");
+  const [currentAnalysis, setCurrentAnalysis] = useState<WebsiteAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [traceEvents, setTraceEvents] = useState<TraceEvent[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -86,14 +87,59 @@ export default function Home() {
     },
   });
 
-  const toTraceEvent = (event: Record<string, any>, index: number): TraceEvent => {
-    const status: TraceEvent["status"] = event.type === "error" ? "error" : event.type === "done" || event.type === "result" ? "done" : "running";
-    return {
-      id: `${event.timestamp || Date.now()}-${index}`,
-      message: event.message || "Processing",
+  const toTraceEvent = (event: Record<string, unknown>, index: number): TraceEvent => {
+    const eventType = typeof event.type === "string" ? event.type : "unknown";
+    const status: TraceEvent["status"] =
+      eventType === "error"
+        ? "error"
+        : eventType === "done" || eventType === "result"
+          ? "done"
+          : "running";
+
+    const traceEvent: TraceEvent = {
+      id: `${typeof event.timestamp === "string" ? event.timestamp : Date.now()}-${index}`,
+      message: typeof event.message === "string" ? event.message : "Processing",
       status,
-      details: event.type,
+      details: eventType,
     };
+
+    if (eventType === "screenshot") {
+      const screenshotUrl = typeof event.screenshot === "string" ? event.screenshot : "";
+      if (screenshotUrl) {
+        traceEvent.type = "screenshots";
+        traceEvent.data = {
+          screenshots: [{ device: "Desktop", url: screenshotUrl }],
+        };
+      }
+    }
+
+    if (eventType === "done") {
+      const doneData = event.data as Partial<WebsiteAnalysis> | undefined;
+      traceEvent.type = "extraction";
+      traceEvent.data = {
+        extractedEvidence: {
+          headings: doneData?.productName ? [doneData.productName] : [],
+          copySnippets: doneData?.productDescription ? [doneData.productDescription] : [],
+          buttons: [],
+          forms: [],
+          featureBlocks: Array.isArray(doneData?.keyFeatures) ? doneData.keyFeatures : [],
+          trustSignals: [],
+          integrations: [],
+        },
+      };
+    }
+
+    if (eventType === "result") {
+      const resultData = event.data as { analysis?: WebsiteAnalysis; personas?: Persona[] } | undefined;
+      const personaCount = Array.isArray(resultData?.personas) ? resultData.personas.length : 0;
+      traceEvent.message = `Generated ${personaCount} customer personas from exploration. Select personas to start synthetic user simulation.`;
+      traceEvent.type = "generation";
+      traceEvent.data = {
+        generatedCount: personaCount,
+      };
+    }
+
+    return traceEvent;
   };
 
   const buildInsightFromResults = (results: SimulationResult[]): DashboardInsight => {
@@ -146,6 +192,7 @@ export default function Home() {
     setView("workspace");
     setStage("idle");
     setCurrentUrl("");
+    setCurrentAnalysis(null);
     setError(null);
     setTraceEvents([]);
     setSelectedUserIds([]);
@@ -168,6 +215,7 @@ export default function Home() {
     setStage("idle");
     setView("workspace");
     setCurrentUrl("");
+    setCurrentAnalysis(null);
     setError(null);
     setTraceEvents([]);
     setSelectedUserIds([]);
@@ -255,6 +303,7 @@ export default function Home() {
 
       const decoder = new TextDecoder();
       let buffer = "";
+      let hasResultEvent = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -271,23 +320,37 @@ export default function Home() {
               const event = toTraceEvent(rawEvent, Math.random());
               
               setTraceEvents((prev) => {
-                const next = [...prev, event];
-                setCurrentSession(s => ({
-                  url,
-                  stage: "tracing",
-                  traceEvents: next,
-                  pipelineData: null,
-                  selectedUserIds: [],
-                  simulationResults: [],
-                  dashboardInsight: null
-                }));
+                const completedPrev = prev.map((item) =>
+                  item.status === "running" ? { ...item, status: "done" as const } : item
+                );
+                const next = [...completedPrev, event];
+                setCurrentSession((s) => {
+                  if (!s) {
+                    return {
+                      url,
+                      stage: "tracing",
+                      traceEvents: next,
+                      pipelineData: null,
+                      selectedUserIds: [],
+                      simulationResults: [],
+                      dashboardInsight: null,
+                    };
+                  }
+
+                  return {
+                    ...s,
+                    traceEvents: next,
+                  };
+                });
                 return next;
               });
 
               if (rawEvent.type === "result" && rawEvent.data?.analysis && rawEvent.data?.personas) {
+                hasResultEvent = true;
                 const analysis = rawEvent.data.analysis as WebsiteAnalysis;
                 const personas = rawEvent.data.personas as Persona[];
                 const pipelineData = toPipelineResult(analysis, personas);
+                setCurrentAnalysis(analysis);
                 setStage("selection");
                 setCurrentSession(s => ({
                   url,
@@ -310,11 +373,41 @@ export default function Home() {
           }
         }
       }
+
+      setTraceEvents((prev) => prev.map((item) =>
+        item.status === "running" ? { ...item, status: "done" as const } : item
+      ));
+
+      if (!hasResultEvent) {
+        throw new Error("Persona generation did not return a completed result. Please retry.");
+      }
     } catch (err) {
       console.error("Exploration failed:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch or analyze the website.");
       setStage("idle");
     }
+  };
+
+  // Convert CandidatePersona back to Persona format for API
+  const toPersona = (candidate: CandidatePersona): Persona => {
+    // Reverse map techSavviness from ai_automation_acceptance
+    let techSavviness: "low" | "medium" | "high" = "medium";
+    if (candidate.ai_automation_acceptance === "Enthusiastic") techSavviness = "high";
+    else if (candidate.ai_automation_acceptance === "Skeptical") techSavviness = "low";
+    
+    return {
+      id: candidate.id,
+      name: candidate.identity_label,
+      age: 35, // Default value
+      role: candidate.archetype,
+      background: candidate.short_bio,
+      segment: candidate.identity_label, // Use name as segment fallback
+      icon: "user", // Default icon
+      painPoints: candidate.biggest_doubts,
+      goals: candidate.priorities_and_concerns,
+      techSavviness,
+      selected: true,
+    };
   };
 
   const handleStartSimulation = async (selectedIds: string[]) => {
@@ -335,20 +428,25 @@ export default function Home() {
         throw new Error("No personas selected");
       }
 
-      const analysis: WebsiteAnalysis = {
+      const analysis: WebsiteAnalysis = currentAnalysis || {
         url: currentUrl,
         productName: new URL(currentUrl).hostname,
-        productDescription: "Extracted from exploration",
-        targetAudience: "General",
-        keyFeatures: [],
-        industry: "Other",
+        productDescription: currentSession.pipelineData.evidence_summary.copySnippets[0] || "",
+        targetAudience: currentSession.pipelineData.audience_space.b2b_vs_b2c,
+        keyFeatures: currentSession.pipelineData.evidence_summary.featureBlocks || [],
+        industry:
+          currentSession.pipelineData.audience_space.industry_verticals[0] ||
+          currentSession.pipelineData.website_type,
       };
 
       const simulationResults: SimulationResult[] = [];
 
       // Run interviews for each selected persona sequentially
-      for (const persona of selectedPersonas) {
+      for (const candidatePersona of selectedPersonas) {
         try {
+          // Convert CandidatePersona back to Persona format for the API
+          const persona = toPersona(candidatePersona);
+          
           const res = await fetch("/api/interview", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -373,18 +471,59 @@ export default function Home() {
 
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              // Process remaining buffer
+              if (buffer.trim()) {
+                const lines = buffer.split("\n");
+                let eventType = "";
+                let eventData = "";
+                for (const line of lines) {
+                  if (line.startsWith("event: ")) {
+                    eventType = line.slice(7);
+                  } else if (line.startsWith("data: ")) {
+                    eventData = line.slice(6);
+                  }
+                }
+                if (eventType === "complete" && eventData) {
+                  try {
+                    result = JSON.parse(eventData);
+                  } catch (e) {
+                    console.error("Failed to parse remaining buffer:", eventData, e);
+                  }
+                }
+              }
+              break;
+            }
 
             buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n\n");
-            buffer = lines.pop() || "";
+            const messages = buffer.split("\n\n");
+            buffer = messages.pop() || "";
 
-            for (const line of lines) {
-              if (line.includes("event: complete")) {
-                const dataLine = line.split("\ndata: ")[1];
-                if (dataLine) {
-                  result = JSON.parse(dataLine);
+            for (const message of messages) {
+              if (!message.trim()) continue;
+              
+              const lines = message.split("\n");
+              let eventType = "";
+              let eventData = "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith("event: ")) {
+                  eventType = trimmed.slice(7);
+                } else if (trimmed.startsWith("data: ")) {
+                  eventData = trimmed.slice(6);
                 }
+              }
+
+              if (eventType === "complete" && eventData) {
+                try {
+                  result = JSON.parse(eventData);
+                  console.log(`Interview result parsed for ${persona.name}:`, result);
+                } catch (e) {
+                  console.error("Failed to parse interview result:", eventData, e);
+                }
+              } else if (eventType === "error") {
+                console.error(`Interview API error for ${persona.name}:`, eventData);
               }
             }
           }
@@ -404,11 +543,14 @@ export default function Home() {
             };
 
             simulationResults.push(mappedResult);
+            console.log(`Added simulation result for ${persona.name}, total: ${simulationResults.length}`);
             // Update UI with completed results progressively
             setCurrentSession(s => s ? { 
               ...s, 
               simulationResults: [...simulationResults]
             } : null);
+          } else {
+            console.warn(`No result extracted for ${persona.name}`);
           }
         } catch (err) {
           console.error(`Interview failed for ${persona.name}:`, err);
@@ -510,16 +652,23 @@ export default function Home() {
                   <SimulationResults 
                     users={currentSession.pipelineData.personas} 
                     results={currentSession.simulationResults || []} 
-                    onContinue={() => setStage("dashboard")}
+                    onContinue={() => {
+                      // Ensure dashboardInsight is set when moving to dashboard
+                      if (!currentSession?.dashboardInsight && currentSession?.simulationResults) {
+                        const insight = buildInsightFromResults(currentSession.simulationResults);
+                        setCurrentSession((s) => s ? { ...s, dashboardInsight: insight } : null);
+                      }
+                      setStage("dashboard");
+                    }}
                   />
                 </div>
               )}
 
               {/* Stage 4: Aggregate Insight Dashboard */}
-              {currentStageLevel >= 4 && currentSession?.pipelineData && currentSession?.dashboardInsight && (
+              {currentStageLevel >= 4 && currentSession?.pipelineData && (
                 <div ref={dashboardRef} className="mt-12 mb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
                   <SimplifiedInsightDashboard 
-                    insight={currentSession.dashboardInsight} 
+                    insight={currentSession?.dashboardInsight || buildInsightFromResults(currentSession?.simulationResults || [])} 
                     pipelineData={currentSession.pipelineData} 
                     onSaveReport={handleSaveReport}
                   />

@@ -10,13 +10,32 @@ interface SimulationResultsProps {
 }
 
 export function SimulationResults({ users, results, onContinue }: SimulationResultsProps) {
+  const progressPercent = users.length > 0 ? (results.length / users.length) * 100 : 0;
+  const isComplete = results.length === users.length;
+
   return (
     <div className="w-full max-w-5xl mx-auto space-y-8">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-slate-100 mb-2">Live Simulation Output</h2>
-        <p className="text-slate-400">
+        <p className="text-slate-400 mb-4">
           Watching synthetic users interact with your landing page.
         </p>
+        
+        {/* Progress Section */}
+        <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-300">
+              Progress: <span className="text-blue-400">{results.length} of {users.length} personas</span>
+            </span>
+            {isComplete && <span className="text-xs px-2 py-1 bg-emerald-900/40 text-emerald-400 rounded-full">Complete</span>}
+          </div>
+          <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -82,8 +101,9 @@ export function SimulationResults({ users, results, onContinue }: SimulationResu
 
       <div className="flex justify-center pt-8">
         <button
+          type="button"
           onClick={onContinue}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold shadow-[0_0_20px_rgba(37,99,235,0.2)] transition-all"
+          className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold shadow-[0_0_20px_rgba(37,99,235,0.2)] transition-all cursor-pointer active:scale-95"
         >
           View Aggregate Insights
         </button>
