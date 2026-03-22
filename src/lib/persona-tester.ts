@@ -297,6 +297,8 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 ];
 
 async function dismissConsentBanners(page: Page): Promise<boolean> {
+  let dismissed = false;
+
   const rejectPatterns = [
     "Reject all", "Reject All", "Decline all", "Decline All",
     "Only necessary", "Necessary only", "Accept necessary",
@@ -307,6 +309,11 @@ async function dismissConsentBanners(page: Page): Promise<boolean> {
     "Accept all", "Accept All", "Alle akzeptieren", "Ich stimme zu",
     "I agree", "Got it", "OK", "Agree", "Zustimmen",
     "Tout accepter", "Agree & close",
+    "Before you continue", "Continue",
+    "Customize", "Save and exit",
+    "Akzeptieren und weiter", "Weiter",
+    "Allow all", "Allow All",
+    "Manage preferences", "Confirm choices",
   ];
 
   for (const text of rejectPatterns) {
@@ -316,33 +323,87 @@ async function dismissConsentBanners(page: Page): Promise<boolean> {
         await btn.first().click();
         await page.waitForTimeout(1000);
         log.info(`Dismissed consent banner with: "${text}"`);
-        return true;
+        dismissed = true;
+        break;
       }
     } catch { /* try next */ }
   }
 
-  const selectorPatterns = [
-    '[aria-label="Reject all"]', '[aria-label="Alle ablehnen"]',
-    '#L2AGLb', 'button[jsname="higCR"]', 'button[jsname="b3VHJd"]',
-    '.fc-cta-do-not-consent', '.fc-cta-consent',
-    '#onetrust-reject-all-handler',
-    '#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll',
-    '.cookie-banner__reject', '.js-cookie-reject',
-  ];
+  if (!dismissed) {
+    const selectorPatterns = [
+      '[aria-label="Reject all"]', '[aria-label="Alle ablehnen"]',
+      '#L2AGLb', 'button[jsname="higCR"]', 'button[jsname="b3VHJd"]',
+      '.fc-cta-do-not-consent', '.fc-cta-consent',
+      '[data-testid="cookie-policy-manage-dialog-btn-reject-all"]',
+      '#onetrust-reject-all-handler', '#onetrust-accept-btn-handler',
+      '#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll',
+      '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll',
+      '.cookie-banner__reject', '.js-cookie-reject',
+      '#cookie-consent-reject', '[data-action="cookie-reject"]',
+      '.consent-banner button', '[class*="consent"] button',
+      '[class*="cookie"] button', '[id*="cookie"] button',
+      '[class*="gdpr"] button', '[id*="gdpr"] button',
+      'tp-yt-paper-dialog button', // YouTube consent
+      'ytd-consent-bump-v2-lightbox button', // YouTube
+      '.consent-bump button',
+    ];
 
-  for (const selector of selectorPatterns) {
-    try {
-      const el = page.locator(selector).first();
-      if (await el.isVisible({ timeout: 300 })) {
-        await el.click();
-        await page.waitForTimeout(1000);
-        log.info(`Dismissed consent banner with selector: ${selector}`);
-        return true;
-      }
-    } catch { /* try next */ }
+    for (const selector of selectorPatterns) {
+      try {
+        const el = page.locator(selector).first();
+        if (await el.isVisible({ timeout: 300 })) {
+          await el.click();
+          await page.waitForTimeout(1000);
+          log.info(`Dismissed consent banner with selector: ${selector}`);
+          dismissed = true;
+          break;
+        }
+      } catch { /* try next */ }
+    }
   }
 
-  return false;
+  // Second pass: check if an overlay is still blocking
+  if (dismissed) {
+    const stillBlocked = await isPageBlocked(page);
+    if (stillBlocked) {
+      log.warn("Page still blocked after first consent dismiss, retrying");
+      for (const text of ["Accept all", "Accept All", "I agree", "Agree", "OK", "Continue"]) {
+        try {
+          const btn = page.getByRole("button", { name: text, exact: false });
+          if (await btn.first().isVisible({ timeout: 300 })) {
+            await btn.first().click();
+            await page.waitForTimeout(1000);
+            log.info(`Second-pass consent dismiss: "${text}"`);
+            break;
+          }
+        } catch { /* try next */ }
+      }
+    }
+  }
+
+  return dismissed;
+}
+
+async function isPageBlocked(page: Page): Promise<boolean> {
+  try {
+    return await page.evaluate(() => {
+      const overlays = document.querySelectorAll(
+        '[class*="consent"], [class*="cookie"], [class*="gdpr"], [class*="overlay"], [class*="modal"], [role="dialog"]'
+      );
+      for (const el of overlays) {
+        const style = window.getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        if (style.display !== "none" && style.visibility !== "hidden" &&
+            rect.width > window.innerWidth * 0.3 && rect.height > window.innerHeight * 0.3) {
+          return true;
+        }
+      }
+      const bodyContent = document.body.innerText?.trim() || "";
+      return bodyContent.length < 50;
+    });
+  } catch {
+    return false;
+  }
 }
 
 async function captureScreenshot(page: Page, dedup?: ScreenshotDedup): Promise<string | null> {
@@ -428,9 +489,17 @@ export async function runPersonaTest(
     await page.goto(targetUrl, { waitUntil: "networkidle", timeout: 20000 });
     await page.waitForTimeout(1500);
 
-    await dismissConsentBanners(page);
+    // Aggressively try to dismiss consent banners (up to 3 rounds)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const dismissed = await dismissConsentBanners(page);
+      if (!dismissed) break;
+      await page.waitForTimeout(500);
+    }
 
     const dedup = createDedup();
+
+    // Detect if page is still blocked by consent/login overlay
+    const pageBlocked = await isPageBlocked(page);
 
     const initialContent = await page.evaluate(() => {
       const headings: string[] = [];
@@ -458,15 +527,23 @@ Goals: ${persona.goals.join("; ")}
 You are beta-testing a website/product on a ${device === "mobile" ? "MOBILE PHONE (iPhone, 375x812px)" : "DESKTOP COMPUTER (1280x900px)"}. You must be BRUTALLY HONEST and CRITICAL — like a real user who has no reason to be nice. You are NOT impressed by default. You have limited patience.
 ${device === "mobile" ? "\nMOBILE-SPECIFIC: Pay extra attention to responsive design, touch targets, hamburger menus, text readability on small screens, and whether the layout adapts properly. Report any elements that overlap, are too small to tap, or require horizontal scrolling." : ""}
 
+SYSTEM-LEVEL AWARENESS — Handle non-business obstacles first:
+- CONSENT/COOKIE BANNERS: If you see a full-screen overlay, modal, or banner asking about cookies/privacy/consent with blurred or blocked background, this is NOT a product bug. Click "Accept All", "I Agree", "OK", "Reject All", or any dismiss button IMMEDIATELY before doing anything else. Do NOT report consent banners as bugs.
+- LOGIN WALLS: If the page requires authentication and shows a login form, try any visible demo credentials. If no demo credentials exist, note "login required" and evaluate only what's publicly visible — do NOT give a 0 buy signal just because you can't log in.
+- CAPTCHA/VERIFICATION: If you encounter a CAPTCHA, reCAPTCHA, or "verify you're human" screen, you cannot solve it. Note this as an environment limitation and evaluate only what you CAN see.
+- BLANK/EMPTY PAGES: If the page appears completely empty or shows only a consent banner, try scrolling down, clicking "Accept" buttons, or waiting. Only if nothing works after multiple attempts should you note "environment access restricted."
+- CRITICAL: If you cannot access the actual product content due to any of the above, your buySignal, verdict, and feedback should explicitly state "Unable to fully evaluate due to [consent wall / login wall / CAPTCHA]. Rating reflects only publicly visible content." Do NOT give a misleading 0% buy signal as if the product is bad — make it clear the limitation is environmental.
+
 YOUR TESTING APPROACH:
-1. If you see a login form with demo credentials on the page, LOG IN FIRST (use fieldType='password' for password fields).
-2. After login, visit EVERY page in the navigation. Click EVERY button you see.
-3. After each action, call give_feedback with your honest, critical reaction.
-4. Try real workflows end-to-end: create a customer, create an invoice, use any AI features.
-5. Look for floating buttons (bottom-right corner), modals, AI assistants — test them!
-6. If something doesn't work or is confusing, report it immediately via give_feedback.
-7. Think: "Would I actually use this daily? Would I pay for this? What's frustrating?"
-8. Be SPECIFIC: don't say "it's nice" — say exactly what works or doesn't and WHY.
+1. FIRST dismiss any consent/cookie/privacy banners by clicking accept/reject buttons.
+2. If you see a login form with demo credentials on the page, LOG IN (use fieldType='password' for password fields).
+3. After clearing obstacles, visit EVERY page in the navigation. Click EVERY button you see.
+4. After each action, call give_feedback with your honest, critical reaction.
+5. Try real workflows end-to-end: create a customer, create an invoice, use any AI features.
+6. Look for floating buttons (bottom-right corner), modals, AI assistants — test them!
+7. If something doesn't work or is confusing, report it immediately via give_feedback.
+8. Think: "Would I actually use this daily? Would I pay for this? What's frustrating?"
+9. Be SPECIFIC: don't say "it's nice" — say exactly what works or doesn't and WHY.
 
 IMPORTANT:
 - You are NOT impressed by default. You have used many tools before and have HIGH standards.
@@ -504,7 +581,7 @@ NAVIGATION RULES:
       },
       {
         role: "user",
-        content: `You've just opened ${targetUrl}. Page title: "${initialContent.title}". Headings: ${initialContent.headings.join(", ")}. Content: ${initialContent.paragraphs.join(" | ")}. Start your beta test — explore, click things, try features, and give honest feedback.`,
+        content: `You've just opened ${targetUrl}. Page title: "${initialContent.title}". Headings: ${initialContent.headings.join(", ")}. Content: ${initialContent.paragraphs.join(" | ")}${pageBlocked ? "\n\n⚠️ WARNING: The page appears to be partially blocked by a consent/cookie overlay or login wall. Try clicking any visible 'Accept', 'Agree', 'OK', or 'Continue' button first before proceeding with your test. If you still cannot access the content after trying, note it as an environment limitation." : ""}. Start your beta test — explore, click things, try features, and give honest feedback.`,
       },
     ];
 
@@ -633,6 +710,7 @@ NAVIGATION RULES:
                   }
                   await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
                   await page.waitForTimeout(800);
+                  await dismissConsentBanners(page);
                   screenshot = await captureScreenshot(page, dedup) || undefined;
                   const samePage = page.url() === urlBeforeClick;
                   resultText = `Clicked "${clickText}". Now on: ${page.url()}.`;

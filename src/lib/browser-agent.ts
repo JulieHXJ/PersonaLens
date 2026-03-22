@@ -286,20 +286,23 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
  * Tries multiple strategies covering Google, YouTube, GDPR/Datenschutz, and generic cookie popups.
  */
 async function dismissConsentBanners(page: Page): Promise<boolean> {
+  let dismissed = false;
+
   const rejectPatterns = [
-    // English
     "Reject all", "Reject All", "Decline all", "Decline All",
     "Only necessary", "Necessary only", "Accept necessary",
     "Deny", "No thanks", "No, thanks",
-    // German (Datenschutz)
     "Alle ablehnen", "Alles ablehnen", "Ablehnen",
     "Nur notwendige", "Nur erforderliche",
-    // French
     "Tout refuser", "Refuser",
-    // Generic fallbacks — accept if no reject option exists
     "Accept all", "Accept All", "Alle akzeptieren", "Ich stimme zu",
     "I agree", "Got it", "OK", "Agree", "Zustimmen",
     "Tout accepter", "Agree & close",
+    "Before you continue", "Continue",
+    "Customize", "Save and exit",
+    "Akzeptieren und weiter", "Weiter",
+    "Allow all", "Allow All",
+    "Manage preferences", "Confirm choices",
   ];
 
   for (const text of rejectPatterns) {
@@ -309,39 +312,84 @@ async function dismissConsentBanners(page: Page): Promise<boolean> {
         await btn.first().click();
         await page.waitForTimeout(1000);
         log.info(`Dismissed consent banner with: "${text}"`);
-        return true;
+        dismissed = true;
+        break;
       }
     } catch { /* try next */ }
   }
 
-  // Try common CSS selectors for consent dialogs
-  const selectorPatterns = [
-    '[aria-label="Reject all"]', '[aria-label="Alle ablehnen"]',
-    '#L2AGLb', // Google consent "I agree"
-    'button[jsname="higCR"]', // Google "Reject all"
-    'button[jsname="b3VHJd"]', // Google "Accept all" fallback
-    '.fc-cta-do-not-consent', // Funding Choices reject
-    '.fc-cta-consent', // Funding Choices accept (fallback)
-    '[data-testid="cookie-policy-manage-dialog-btn-reject-all"]',
-    '#onetrust-reject-all-handler',
-    '#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll',
-    '.cookie-banner__reject', '.js-cookie-reject',
-    '#cookie-consent-reject', '[data-action="cookie-reject"]',
-  ];
+  if (!dismissed) {
+    const selectorPatterns = [
+      '[aria-label="Reject all"]', '[aria-label="Alle ablehnen"]',
+      '#L2AGLb', 'button[jsname="higCR"]', 'button[jsname="b3VHJd"]',
+      '.fc-cta-do-not-consent', '.fc-cta-consent',
+      '[data-testid="cookie-policy-manage-dialog-btn-reject-all"]',
+      '#onetrust-reject-all-handler', '#onetrust-accept-btn-handler',
+      '#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll',
+      '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll',
+      '.cookie-banner__reject', '.js-cookie-reject',
+      '#cookie-consent-reject', '[data-action="cookie-reject"]',
+      '[class*="consent"] button', '[class*="cookie"] button',
+      '[class*="gdpr"] button', '[id*="cookie"] button',
+      'tp-yt-paper-dialog button', 'ytd-consent-bump-v2-lightbox button',
+      '.consent-bump button',
+    ];
 
-  for (const selector of selectorPatterns) {
-    try {
-      const el = page.locator(selector).first();
-      if (await el.isVisible({ timeout: 300 })) {
-        await el.click();
-        await page.waitForTimeout(1000);
-        log.info(`Dismissed consent banner with selector: ${selector}`);
-        return true;
-      }
-    } catch { /* try next */ }
+    for (const selector of selectorPatterns) {
+      try {
+        const el = page.locator(selector).first();
+        if (await el.isVisible({ timeout: 300 })) {
+          await el.click();
+          await page.waitForTimeout(1000);
+          log.info(`Dismissed consent banner with selector: ${selector}`);
+          dismissed = true;
+          break;
+        }
+      } catch { /* try next */ }
+    }
   }
 
-  return false;
+  // Second pass if still blocked
+  if (dismissed) {
+    const stillBlocked = await isPageBlocked(page);
+    if (stillBlocked) {
+      log.warn("Page still blocked after first consent dismiss, retrying");
+      for (const text of ["Accept all", "Accept All", "I agree", "Agree", "OK", "Continue"]) {
+        try {
+          const btn = page.getByRole("button", { name: text, exact: false });
+          if (await btn.first().isVisible({ timeout: 300 })) {
+            await btn.first().click();
+            await page.waitForTimeout(1000);
+            break;
+          }
+        } catch { /* try next */ }
+      }
+    }
+  }
+
+  return dismissed;
+}
+
+async function isPageBlocked(page: Page): Promise<boolean> {
+  try {
+    return await page.evaluate(() => {
+      const overlays = document.querySelectorAll(
+        '[class*="consent"], [class*="cookie"], [class*="gdpr"], [class*="overlay"], [class*="modal"], [role="dialog"]'
+      );
+      for (const el of overlays) {
+        const style = window.getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        if (style.display !== "none" && style.visibility !== "hidden" &&
+            rect.width > window.innerWidth * 0.3 && rect.height > window.innerHeight * 0.3) {
+          return true;
+        }
+      }
+      const bodyContent = document.body.innerText?.trim() || "";
+      return bodyContent.length < 50;
+    });
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -765,8 +813,12 @@ export async function runBrowserAgent(
     await page.goto(targetUrl, { waitUntil: "networkidle", timeout: 20000 });
     await page.waitForTimeout(1500);
 
-    // Dismiss cookie/consent banners before taking the initial screenshot
-    await dismissConsentBanners(page);
+    // Aggressively dismiss consent banners (up to 3 rounds)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const dismissed = await dismissConsentBanners(page);
+      if (!dismissed) break;
+      await page.waitForTimeout(500);
+    }
 
     // Take initial screenshot
     const dedup = createDedup();

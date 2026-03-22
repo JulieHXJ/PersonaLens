@@ -332,8 +332,45 @@ function ReportContent() {
         ? "Moderate Signal"
         : "Weak Signal";
 
+  // --- Environment Warning Detection ---
+  const failedCount = results.filter((r) => r.status === "failed").length;
+  const zeroBuyCount = extracted.filter((e) => e.buySignal === 0 || !e.buySignal).length;
+  const accessIssueKeywords = /unable to.*evaluat|environment|consent|login.*wall|captcha|blocked|access.*restrict|cannot.*access|could not.*access/i;
+  const accessBlockedCount = extracted.filter((e) =>
+    accessIssueKeywords.test(e.overallSentiment || "") ||
+    accessIssueKeywords.test((e as Record<string, unknown>).overallVerdict as string || "")
+  ).length;
+
+  const hasEnvironmentWarning =
+    (failedCount > results.length * 0.5) ||
+    (zeroBuyCount >= extracted.length && extracted.length > 0 && demandPercent === 0) ||
+    (accessBlockedCount > completed.length * 0.5);
+
   return (
     <>
+      {/* Environment Warning */}
+      {hasEnvironmentWarning && (
+        <section className="px-6 lg:px-10 pt-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-6 flex items-start gap-4">
+              <span className="material-symbols-outlined text-amber-500 text-2xl shrink-0 mt-0.5">warning</span>
+              <div>
+                <h3 className="text-sm font-bold text-amber-500 mb-1">Environment Warning</h3>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  {failedCount > results.length * 0.5
+                    ? `${failedCount} of ${results.length} interviews failed. The test environment may have blocked access (consent walls, CAPTCHAs, login requirements, or firewall rules).`
+                    : accessBlockedCount > completed.length * 0.5
+                      ? `${accessBlockedCount} of ${completed.length} personas reported access limitations. The results below may not reflect the actual product quality.`
+                      : `All ${extracted.length} personas gave a 0% buy signal. This typically indicates the testing environment was blocked by consent walls, login requirements, or geographic restrictions — not that the product has zero value.`
+                  }
+                  {" "}Consider re-running the test with a different URL or after verifying the site is accessible from the testing environment.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Header with Demand Gauge */}
       <section className="p-6 lg:p-10 bg-surface-container-low border-b border-outline-variant/5">
         <div className="max-w-6xl mx-auto">
