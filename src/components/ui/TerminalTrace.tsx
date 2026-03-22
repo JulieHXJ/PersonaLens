@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { TraceEvent } from "@/types/pipeline";
 import { CheckCircle2, ChevronRight, CircleDashed, Loader2, XCircle, ChevronDown, ImageIcon, Link, Search, FileJson, Layout, Map } from "lucide-react";
 
@@ -10,27 +10,51 @@ interface TerminalTraceProps {
 
 export function TerminalTrace({ events = [] }: TerminalTraceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prevEventCountRef = useRef(0);
+  const isPointerInTraceRef = useRef(false);
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+  const [screenshotPageByEvent, setScreenshotPageByEvent] = useState<Record<string, number>>({});
 
   // Ensure we only work with a valid array and filter out any undefined/null items
-  const validEvents = (events || []).filter(Boolean);
+  const validEvents = useMemo(() => (events || []).filter(Boolean), [events]);
   const lastEvent = validEvents[validEvents.length - 1];
 
   // Auto-expand events when they finish running
   useEffect(() => {
-    validEvents.forEach(event => {
-      if (event.status === "done" && event.type !== "extraction" && !expandedEvents.has(event.id)) {
-        setExpandedEvents(prev => new Set(prev).add(event.id));
-      }
+    setExpandedEvents((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+
+      validEvents.forEach((event) => {
+        if (event.status === "done" && event.type !== "extraction" && !next.has(event.id)) {
+          next.add(event.id);
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
     });
   }, [validEvents]);
 
-  // Add auto-scrolling to the bottom of the trace window
+  // Auto-scroll only when a new event arrives and user is not actively interacting
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const container = scrollRef.current;
+    if (!container) {
+      prevEventCountRef.current = validEvents.length;
+      return;
     }
-  }, [validEvents, expandedEvents]);
+
+    const hasNewEvent = validEvents.length > prevEventCountRef.current;
+    const distanceFromBottom =
+      container.scrollHeight - (container.scrollTop + container.clientHeight);
+    const isNearBottom = distanceFromBottom < 80;
+
+    if (hasNewEvent && !isPointerInTraceRef.current && isNearBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
+
+    prevEventCountRef.current = validEvents.length;
+  }, [validEvents]);
 
   const toggleExpand = (id: string) => {
     setExpandedEvents(prev => {
@@ -83,25 +107,65 @@ export function TerminalTrace({ events = [] }: TerminalTraceProps) {
         );
 
       case "screenshots":
+        const pageSize = 3;
+        const screenshots = event.data.screenshots || [];
+        const totalPages = Math.max(1, Math.ceil(screenshots.length / pageSize));
+        const currentPage = Math.min(
+          screenshotPageByEvent[event.id] || 1,
+          totalPages
+        );
+        const start = (currentPage - 1) * pageSize;
+        const pagedScreenshots = screenshots.slice(start, start + pageSize);
+
         return (
-          <div className="grid grid-cols-3 gap-4 pt-2">
-            {event.data.screenshots?.map((shot, i) => (
-              <div key={i} className="flex flex-col gap-2">
-                <div className="text-[10px] text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                  <ImageIcon className="w-3 h-3" /> {shot.device}
-                </div>
-                <div className="relative group rounded-md overflow-hidden border border-slate-800 bg-slate-900 aspect-video flex items-center justify-center">
-                  <img 
-                    src={shot.url} 
-                    alt={`${shot.device} preview`} 
-                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                  />
-                  <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="bg-slate-900/90 text-white text-xs px-2 py-1 rounded shadow-lg backdrop-blur-sm">View</span>
+          <div className="pt-2 space-y-3">
+            <div className="grid grid-cols-3 gap-4">
+              {pagedScreenshots.map((shot, i) => (
+                <div key={`${shot.url}-${i}`} className="flex flex-col gap-2">
+                  <div className="h-12 text-[10px] text-slate-500 uppercase tracking-wider flex items-start gap-1 leading-5 overflow-hidden">
+                    <ImageIcon className="w-3 h-3" /> {shot.device}
+                  </div>
+                  <div className="relative group rounded-md overflow-hidden border border-slate-800 bg-slate-900 aspect-video flex items-center justify-center">
+                    <img 
+                      src={shot.url} 
+                      alt={`${shot.device} preview`} 
+                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                    />
+                    <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="bg-slate-900/90 text-white text-xs px-2 py-1 rounded shadow-lg backdrop-blur-sm">View</span>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-end gap-1.5">
+                {Array.from({ length: totalPages }, (_, idx) => {
+                  const pageNum = idx + 1;
+                  const isActive = pageNum === currentPage;
+                  return (
+                    <button
+                      key={`${event.id}-page-${pageNum}`}
+                      type="button"
+                      onClick={() =>
+                        setScreenshotPageByEvent((prev) => ({
+                          ...prev,
+                          [event.id]: pageNum,
+                        }))
+                      }
+                      className={`min-w-7 h-7 px-2 rounded text-xs font-mono border transition-colors ${
+                        isActive
+                          ? "bg-blue-600/20 text-blue-300 border-blue-500/40"
+                          : "bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
               </div>
-            ))}
+            )}
           </div>
         );
 
@@ -206,6 +270,12 @@ export function TerminalTrace({ events = [] }: TerminalTraceProps) {
       
       <div 
         ref={scrollRef}
+        onMouseEnter={() => {
+          isPointerInTraceRef.current = true;
+        }}
+        onMouseLeave={() => {
+          isPointerInTraceRef.current = false;
+        }}
         className="p-6 h-[450px] overflow-y-auto space-y-4"
       >
         {validEvents.length === 0 && (

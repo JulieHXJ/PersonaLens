@@ -8,9 +8,11 @@ import { Loader2, ArrowRight } from "lucide-react";
 interface UrlInputFormProps {
   onSubmit: (url: string) => Promise<void>;
   isLoading?: boolean;
+  isBlocked?: boolean;
+  blockedMessage?: string;
 }
 
-export function UrlInputForm({ onSubmit, isLoading = false }: UrlInputFormProps) {
+export function UrlInputForm({ onSubmit, isLoading = false, isBlocked = false, blockedMessage }: UrlInputFormProps) {
   const [url, setUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,7 +35,7 @@ export function UrlInputForm({ onSubmit, isLoading = false }: UrlInputFormProps)
     }
   };
 
-  const disabled = isLoading || isSubmitting;
+  const disabled = isLoading || isSubmitting || isBlocked;
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto flex flex-col sm:flex-row gap-3 relative z-10">
@@ -69,6 +71,9 @@ export function UrlInputForm({ onSubmit, isLoading = false }: UrlInputFormProps)
           </>
         )}
       </Button>
+      {isBlocked && blockedMessage && (
+        <p className="text-xs text-amber-400 font-mono sm:absolute sm:-bottom-6 sm:left-0">{blockedMessage}</p>
+      )}
     </form>
   );
 }

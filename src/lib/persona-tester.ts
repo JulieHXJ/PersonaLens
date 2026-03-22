@@ -53,18 +53,25 @@ function isConsentRelatedAction(toolName: string, args: Record<string, unknown>)
 }
 
 let _gemini: OpenAI | null = null;
-function getGemini() {
-  if (!_gemini) {
+let _geminiApiKey: string | null = null;
+function getGemini(apiKey?: string) {
+  const effectiveApiKey = apiKey || process.env.GEMINI_API_KEY || "";
+  if (!effectiveApiKey) {
+    throw new Error("Gemini API key is required");
+  }
+
+  if (!_gemini || _geminiApiKey !== effectiveApiKey) {
     _gemini = new OpenAI({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey: effectiveApiKey,
       baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
     });
+    _geminiApiKey = effectiveApiKey;
   }
   return _gemini;
 }
 
 const MODEL = "gemini-3.1-flash-lite-preview";
-const MAX_STEPS = 25;
+const MAX_STEPS = 10;
 
 export interface DetailedFinding {
   category: string;
@@ -637,7 +644,8 @@ export async function runPersonaTest(
   persona: Persona,
   analysis: WebsiteAnalysis,
   onEvent?: (msg: string) => void,
-  device: DeviceMode = "desktop"
+  device: DeviceMode = "desktop",
+  geminiApiKey?: string
 ): Promise<BetaTestResult> {
   const runStart = Date.now();
   let browser: Browser | null = null;
@@ -731,7 +739,7 @@ IMPORTANT:
 - Try to break things: enter weird data, click things in wrong order, test edge cases.
 - You stay on the same domain: ${allowedOrigin}
 - After thoroughly testing all features, call finish_testing with your complete assessment.
-- You have max ${MAX_STEPS} actions — use them all to test as much as possible.
+- You have max ${MAX_STEPS} actions — use enough actions to validate the main flow and key friction points.
 
 INTERACTION PRECISION — Distinguish CTA from descriptive text:
 - Web pages contain two types of text: (1) INTERACTIVE elements — buttons, links, CTAs with short action verbs like "Download now", "Learn more", "Get started", "Sign up" — and (2) DESCRIPTIVE text — headings, labels, paragraphs, promotional copy.
@@ -785,7 +793,7 @@ NAVIGATION RULES:
     let bonusSteps = 0;
     for (let step = 0; step < MAX_STEPS + bonusSteps; step++) {
       if (step > 0) {
-        await new Promise((r) => setTimeout(r, 5000));
+        await new Promise((r) => setTimeout(r, 1200));
       }
 
       onEvent?.(`${persona.name} thinking... (step ${step + 1}/${MAX_STEPS + bonusSteps})`);
@@ -793,7 +801,7 @@ NAVIGATION RULES:
       let response;
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
-          response = await getGemini().chat.completions.create({
+          response = await getGemini(geminiApiKey).chat.completions.create({
             model: MODEL,
             messages,
             tools: TOOLS,

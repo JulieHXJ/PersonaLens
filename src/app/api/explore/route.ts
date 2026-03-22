@@ -11,8 +11,8 @@ const log = createLogger("api:explore");
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
-  const { url, maxSteps } = await req.json();
-  log.info(`Explore request received`, { url, maxSteps });
+  const { url, maxSteps, geminiApiKey } = await req.json();
+  log.info(`Explore request received`, { url, maxSteps, hasGeminiApiKey: Boolean(geminiApiKey) });
 
   if (!url || typeof url !== "string") {
     log.warn("Missing URL in request");
@@ -27,6 +27,13 @@ export async function POST(req: NextRequest) {
   } catch {
     log.warn(`Invalid URL rejected: ${url}`);
     return new Response(JSON.stringify({ error: "Invalid URL" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (!geminiApiKey || typeof geminiApiKey !== "string" || geminiApiKey.trim().length === 0) {
+    return new Response(JSON.stringify({ error: "Gemini API key is required. Configure it before running analysis." }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
@@ -74,7 +81,10 @@ export async function POST(req: NextRequest) {
       };
 
       try {
-        const result = await runBrowserAgent(url, emit, { maxSteps: maxSteps || undefined });
+        const result = await runBrowserAgent(url, emit, {
+          maxSteps: maxSteps || undefined,
+          geminiApiKey: geminiApiKey.trim(),
+        });
         const durationMs = Date.now() - startTime;
 
         saveExplorationEvents(explorationId, allEvents);

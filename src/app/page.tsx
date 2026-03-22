@@ -31,6 +31,11 @@ export default function Home() {
   const [traceEvents, setTraceEvents] = useState<TraceEvent[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [currentInterviewingName, setCurrentInterviewingName] = useState<string | null>(null);
+  const [currentInterviewActivity, setCurrentInterviewActivity] = useState<string | null>(null);
+  const [geminiApiKey, setGeminiApiKey] = useState<string>("");
+  const [showGeminiKey, setShowGeminiKey] = useState<boolean>(false);
+  const [isGeminiKeySaved, setIsGeminiKeySaved] = useState<boolean>(false);
+  const [showGeminiConfig, setShowGeminiConfig] = useState<boolean>(true);
   
   // Persistent Storage State
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
@@ -181,13 +186,16 @@ export default function Home() {
               .map((page) => ({
                 url: typeof page.url === "string" ? page.url : "",
                 pageType:
+                  page.pageType === "home" ||
                   page.pageType === "homepage" ||
                   page.pageType === "pricing" ||
                   page.pageType === "about" ||
                   page.pageType === "features" ||
                   page.pageType === "blog" ||
                   page.pageType === "contact"
-                    ? page.pageType
+                    ? page.pageType === "home"
+                      ? "homepage"
+                      : page.pageType
                     : "other",
                 confidence: typeof page.confidence === "number" ? page.confidence : 70,
               }))
@@ -218,11 +226,10 @@ export default function Home() {
     if (eventType === "screenshot") {
       const screenshotUrl = typeof event.screenshot === "string" ? event.screenshot : "";
       if (screenshotUrl) {
-        const deviceByIndex: ("Desktop" | "Tablet" | "Mobile")[] = ["Desktop", "Tablet", "Mobile"];
         traceEvent.type = "screenshots";
         traceEvent.message = "Capturing screenshots...";
         traceEvent.data = {
-          screenshots: [{ device: deviceByIndex[index % 3], url: screenshotUrl }],
+          screenshots: [{ device: String(event.message || "Snapshot"), url: screenshotUrl }],
         };
       }
     }
@@ -303,12 +310,18 @@ export default function Home() {
 
   useEffect(() => {
     const stored = localStorage.getItem("marketMirror_reports");
+    const storedGeminiApiKey = localStorage.getItem("marketMirror_geminiApiKey");
     if (stored) {
       try {
         setSavedReports(JSON.parse(stored));
       } catch (e) {
         console.error("Failed to parse saved reports", e);
       }
+    }
+    if (storedGeminiApiKey) {
+      setGeminiApiKey(storedGeminiApiKey);
+      setIsGeminiKeySaved(true);
+      setShowGeminiConfig(false);
     }
   }, []);
 
@@ -326,6 +339,7 @@ export default function Home() {
     setTraceEvents([]);
     setSelectedUserIds([]);
     setCurrentInterviewingName(null);
+    setCurrentInterviewActivity(null);
     setCurrentSession(null);
   };
 
@@ -350,6 +364,7 @@ export default function Home() {
     setTraceEvents([]);
     setSelectedUserIds([]);
     setCurrentInterviewingName(null);
+    setCurrentInterviewActivity(null);
     setCurrentSession(null);
   };
 
@@ -401,15 +416,37 @@ export default function Home() {
   };
 
   const handleAudit = async (url: string) => {
+    if (!isGeminiKeySaved || !geminiApiKey.trim()) {
+      setError("Please save your Gemini API key before starting analysis.");
+      setStage("idle");
+      return;
+    }
+
     if (!url.trim()) {
       setError("Please enter a URL");
       return;
     }
 
+    let parsedUrl: URL;
     try {
-      new URL(url);
+      parsedUrl = new URL(url);
     } catch {
       setError("Please enter a valid URL (e.g., https://example.com)");
+      return;
+    }
+
+    const typoTlds: Record<string, string> = {
+      ".come": ".com",
+      ".cim": ".com",
+      ".con": ".com",
+      ".cm": ".com",
+      ".ogr": ".org",
+    };
+    const host = parsedUrl.hostname.toLowerCase();
+    const matchedTypo = Object.keys(typoTlds).find((tld) => host.endsWith(tld));
+    if (matchedTypo) {
+      const suggestedHost = host.slice(0, -matchedTypo.length) + typoTlds[matchedTypo];
+      setError(`Domain looks invalid: ${host}. Did you mean https://${suggestedHost}?`);
       return;
     }
 
@@ -422,7 +459,7 @@ export default function Home() {
       const res = await fetch("/api/explore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, maxSteps: 25 }),
+        body: JSON.stringify({ url, maxSteps: 25, geminiApiKey: geminiApiKey.trim() }),
       });
 
       if (!res.ok) {
@@ -461,16 +498,18 @@ export default function Home() {
                 let next: TraceEvent[];
 
                 if (event.type === "screenshots" && event.data?.screenshots?.length) {
-                  const incoming = event.data.screenshots[0];
+                  const incomingShots = event.data.screenshots;
                   const existingIndex = completedPrev.findIndex((item) => item.type === "screenshots");
 
                   if (existingIndex >= 0) {
                     const existing = completedPrev[existingIndex];
                     const existingShots = existing.data?.screenshots || [];
                     const mergedShots = [...existingShots];
-                    if (!mergedShots.some((shot) => shot.url === incoming.url)) {
-                      mergedShots.push(incoming);
-                    }
+                    incomingShots.forEach((incoming) => {
+                      if (!mergedShots.some((shot) => shot.url === incoming.url)) {
+                        mergedShots.push(incoming);
+                      }
+                    });
 
                     const updated = {
                       ...existing,
@@ -478,7 +517,7 @@ export default function Home() {
                       message: "Capturing screenshots...",
                       data: {
                         ...existing.data,
-                        screenshots: mergedShots.slice(-3),
+                        screenshots: mergedShots.slice(-30),
                       },
                     };
 
@@ -573,7 +612,12 @@ export default function Home() {
       }
     } catch (err) {
       console.error("Exploration failed:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch or analyze the website.");
+      const message = err instanceof Error ? err.message : String(err);
+      if (/ERR_NAME_NOT_RESOLVED|ENOTFOUND|DNS/i.test(message)) {
+        setError(`Domain cannot be resolved. Please check the URL spelling (e.g., use .com not .come).`);
+      } else {
+        setError(message || "Failed to fetch or analyze the website.");
+      }
       setStage("idle");
     }
   };
@@ -601,6 +645,12 @@ export default function Home() {
   };
 
   const handleStartSimulation = async (selectedIds: string[]) => {
+    if (!isGeminiKeySaved || !geminiApiKey.trim()) {
+      setError("Please save your Gemini API key before simulation.");
+      setStage("selection");
+      return;
+    }
+
     setSelectedUserIds(selectedIds);
     setStage("simulating");
     setCurrentSession(s => s ? { ...s, stage: "simulating", selectedUserIds: selectedIds } : null);
@@ -637,6 +687,7 @@ export default function Home() {
           // Convert CandidatePersona back to Persona format for the API
           const persona = toPersona(candidatePersona);
           setCurrentInterviewingName(persona.name);
+          setCurrentInterviewActivity("Starting interview...");
           
           const res = await fetch("/api/interview", {
             method: "POST",
@@ -644,7 +695,8 @@ export default function Home() {
             body: JSON.stringify({
               persona,
               analysis,
-              device: "desktop"
+              device: "desktop",
+              geminiApiKey: geminiApiKey.trim(),
             }),
           });
 
@@ -712,6 +764,15 @@ export default function Home() {
                   console.log(`Interview result parsed for ${persona.name}:`, result);
                 } catch (e) {
                   console.error("Failed to parse interview result:", eventData, e);
+                }
+              } else if (eventType === "activity" && eventData) {
+                try {
+                  const parsedActivity = JSON.parse(eventData) as { message?: string };
+                  if (parsedActivity?.message) {
+                    setCurrentInterviewActivity(parsedActivity.message);
+                  }
+                } catch {
+                  setCurrentInterviewActivity(eventData);
                 }
               } else if (eventType === "error") {
                 console.error(`Interview API error for ${persona.name}:`, eventData);
@@ -799,16 +860,19 @@ export default function Home() {
               ...s, 
               simulationResults: [...simulationResults]
             } : null);
+            setCurrentInterviewActivity(null);
           } else {
             console.warn(`No result extracted for ${persona.name}`);
           }
         } catch (err) {
           console.error(`Interview failed for ${persona.name}:`, err);
+          setCurrentInterviewActivity(null);
           // Continue with next persona even if one fails
         }
       }
 
       setCurrentInterviewingName(null);
+      setCurrentInterviewActivity(null);
 
       // Move to dashboard after all interviews complete
       if (simulationResults.length === 0) {
@@ -826,6 +890,7 @@ export default function Home() {
     } catch (err) {
       console.error("Simulation error:", err);
       setCurrentInterviewingName(null);
+      setCurrentInterviewActivity(null);
       setError(err instanceof Error ? err.message : "Simulation failed");
       setStage("selection");
     }
@@ -878,7 +943,71 @@ export default function Home() {
               {/* Input Form (visible on idle or tracing) */}
               {currentStageLevel >= 0 && (
                 <div className={`transition-all duration-500 ${currentStageLevel >= 1 ? 'mb-16' : 'mt-8'}`}>
-                  <UrlInputForm onSubmit={handleAudit} isLoading={stage === "tracing"} />
+                  {showGeminiConfig ? (
+                    <div className="w-full max-w-2xl mx-auto mb-4 bg-[#030712] border border-slate-800 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-widest text-slate-500">Gemini API Key (Required)</div>
+                          <div className="text-sm text-slate-300">Configure your own key before running analysis.</div>
+                        </div>
+                        {isGeminiKeySaved ? (
+                          <span className="text-xs px-2 py-1 bg-emerald-900/40 text-emerald-400 rounded-full">Saved</span>
+                        ) : (
+                          <span className="text-xs px-2 py-1 bg-amber-900/40 text-amber-400 rounded-full">Not Configured</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type={showGeminiKey ? "text" : "password"}
+                          value={geminiApiKey}
+                          onChange={(e) => {
+                            setGeminiApiKey(e.target.value);
+                            setIsGeminiKeySaved(false);
+                          }}
+                          placeholder="AIza..."
+                          className="flex-1 h-11 px-3 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowGeminiKey((prev) => !prev)}
+                          className="h-11 px-3 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
+                        >
+                          {showGeminiKey ? "Hide" : "Show"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            localStorage.setItem("marketMirror_geminiApiKey", geminiApiKey.trim());
+                            setIsGeminiKeySaved(true);
+                            setShowGeminiConfig(false);
+                            setError(null);
+                          }}
+                          disabled={!geminiApiKey.trim()}
+                          className="h-11 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold transition-colors"
+                        >
+                          Save Key
+                        </button>
+                      </div>
+                      <p className="mt-2 text-[11px] text-slate-500">Saved locally in your browser via localStorage for this workspace.</p>
+                    </div>
+                  ) : (
+                    <div className="w-full max-w-2xl mx-auto mb-4 bg-emerald-900/20 border border-emerald-700/40 rounded-xl p-3 flex items-center justify-between gap-3">
+                      <div className="text-sm text-emerald-300">Gemini API key configured. You can start using MarketMirror now.</div>
+                      <button
+                        type="button"
+                        onClick={() => setShowGeminiConfig(true)}
+                        className="text-xs px-2 py-1 rounded border border-emerald-600/40 text-emerald-300 hover:bg-emerald-800/20"
+                      >
+                        Change Key
+                      </button>
+                    </div>
+                  )}
+                  <UrlInputForm
+                    onSubmit={handleAudit}
+                    isLoading={stage === "tracing"}
+                    isBlocked={!isGeminiKeySaved || !geminiApiKey.trim()}
+                    blockedMessage="Configure and save your Gemini API key first."
+                  />
                 </div>
               )}
 
@@ -908,6 +1037,7 @@ export default function Home() {
                     )} 
                     results={currentSession.simulationResults || []} 
                     currentInterviewingName={stage === "simulating" ? currentInterviewingName : null}
+                    currentInterviewActivity={stage === "simulating" ? currentInterviewActivity : null}
                     onContinue={() => {
                       // Ensure dashboardInsight is set when moving to dashboard
                       if (!currentSession?.dashboardInsight && currentSession?.simulationResults) {

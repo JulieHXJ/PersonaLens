@@ -197,3 +197,39 @@
 [2026-03-21T20:08:55.968Z] [ERROR] [api:interview] Interview failed {
   "error": "429 status code (no body)"
 }
+[2026-03-22T12:23:26.319Z] [ERROR] [agent:browser] Agent failed for https://www.example.com {
+  "error": "analysis.keyFeatures.join is not a function",
+  "stack": "TypeError: analysis.keyFeatures.join is not a function\n    at generatePersonasFromAnalysis (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1233:34)\n    at runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1201:32)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:85:32)",
+  "durationMs": 24536
+}
+[2026-03-22T12:23:26.320Z] [ERROR] [api:explore] Explore failed {
+  "url": "https://www.example.com",
+  "explorationId": "1774182181780-exitoe",
+  "eventCount": 11,
+  "error": "analysis.keyFeatures.join is not a function",
+  "stack": "TypeError: analysis.keyFeatures.join is not a function\n    at generatePersonasFromAnalysis (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1233:34)\n    at runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1201:32)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:85:32)"
+}
+[2026-03-22T13:54:24.429Z] [ERROR] [agent:browser] Agent failed for https://www.tum.de {
+  "error": "page.goto: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://www.tum.de/\", waiting until \"networkidle\"\u001b[22m\n",
+  "stack": "page.goto: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://www.tum.de/\", waiting until \"networkidle\"\u001b[22m\n\n    at runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1093:44)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:96:32)",
+  "durationMs": 21403
+}
+[2026-03-22T13:54:24.441Z] [ERROR] [api:explore] Explore failed {
+  "url": "https://www.tum.de",
+  "explorationId": "1774187643024-gl5e82",
+  "eventCount": 2,
+  "error": "page.goto: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://www.tum.de/\", waiting until \"networkidle\"\u001b[22m\n",
+  "stack": "page.goto: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"https://www.tum.de/\", waiting until \"networkidle\"\u001b[22m\n\n    at runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1093:44)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:96:32)"
+}
+[2026-03-22T13:54:44.069Z] [ERROR] [agent:browser] Agent failed for https://www.cursor.come {
+  "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://www.cursor.come/\nCall log:\n\u001b[2m  - navigating to \"https://www.cursor.come/\", waiting until \"networkidle\"\u001b[22m\n",
+  "stack": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://www.cursor.come/\nCall log:\n\u001b[2m  - navigating to \"https://www.cursor.come/\", waiting until \"networkidle\"\u001b[22m\n\n    at runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1093:44)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:96:32)",
+  "durationMs": 1136
+}
+[2026-03-22T13:54:44.073Z] [ERROR] [api:explore] Explore failed {
+  "url": "https://www.cursor.come",
+  "explorationId": "1774187682929-aqe05z",
+  "eventCount": 2,
+  "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://www.cursor.come/\nCall log:\n\u001b[2m  - navigating to \"https://www.cursor.come/\", waiting until \"networkidle\"\u001b[22m\n",
+  "stack": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://www.cursor.come/\nCall log:\n\u001b[2m  - navigating to \"https://www.cursor.come/\", waiting until \"networkidle\"\u001b[22m\n\n    at runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1093:44)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:96:32)"
+}

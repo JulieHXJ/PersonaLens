@@ -7,14 +7,22 @@ const log = createLogger("api:interview");
 
 export async function POST(req: NextRequest) {
   try {
-    const { persona, analysis, device } = (await req.json()) as {
+    const { persona, analysis, device, geminiApiKey } = (await req.json()) as {
       persona: Persona;
       analysis: WebsiteAnalysis;
       device?: DeviceMode;
+      geminiApiKey?: string;
     };
 
     if (!persona || !analysis) {
       return new Response(JSON.stringify({ error: "persona and analysis are required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (!geminiApiKey || typeof geminiApiKey !== "string" || geminiApiKey.trim().length === 0) {
+      return new Response(JSON.stringify({ error: "Gemini API key is required. Configure it before simulation." }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
@@ -35,7 +43,7 @@ export async function POST(req: NextRequest) {
         try {
           const result = await runPersonaTest(persona, analysis, (msg) => {
             send("activity", { message: msg, timestamp: new Date().toISOString() });
-          }, deviceMode);
+          }, deviceMode, geminiApiKey.trim());
 
           const mapped = {
             personaId: result.personaId,

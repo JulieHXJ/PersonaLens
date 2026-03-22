@@ -1,4 +1,4 @@
-# Nightshift (PersonaLens)
+# Nightshift (MarketMirror)
 
 ## What This Is
 Autonomous AI customer discovery engine. Users configure a run, press go, go to sleep. By morning: a structured market intelligence report based on 50+ simulated customer interviews.

@@ -7,10 +7,11 @@ interface SimulationResultsProps {
   users: CandidatePersona[];
   results: SimulationResult[];
   currentInterviewingName?: string | null;
+  currentInterviewActivity?: string | null;
   onContinue: () => void;
 }
 
-export function SimulationResults({ users, results, currentInterviewingName, onContinue }: SimulationResultsProps) {
+export function SimulationResults({ users, results, currentInterviewingName, currentInterviewActivity, onContinue }: SimulationResultsProps) {
   const progressPercent = users.length > 0 ? (results.length / users.length) * 100 : 0;
   const isComplete = results.length === users.length;
 
@@ -38,9 +39,16 @@ export function SimulationResults({ users, results, currentInterviewingName, onC
           </div>
 
           {currentInterviewingName && !isComplete && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-blue-300">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="animate-pulse">Having interview with {currentInterviewingName}...</span>
+            <div className="mt-3 space-y-1">
+              <div className="flex items-center gap-2 text-sm text-blue-300">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="animate-pulse">Having interview with {currentInterviewingName}...</span>
+              </div>
+              {currentInterviewActivity && (
+                <div className="text-xs text-slate-400 font-mono truncate">
+                  {currentInterviewActivity}
+                </div>
+              )}
             </div>
           )}
         </div>

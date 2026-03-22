@@ -14,12 +14,11 @@ const log = createLogger("agent:browser");
 
 interface ScreenshotDedup {
   hashes: Set<string>;
-  contentKeys: Set<string>;
   duplicateCount: number;
 }
 
 function createDedup(): ScreenshotDedup {
-  return { hashes: new Set(), contentKeys: new Set(), duplicateCount: 0 };
+  return { hashes: new Set(), duplicateCount: 0 };
 }
 
 async function isScreenshotDuplicate(
@@ -33,15 +32,7 @@ async function isScreenshotDuplicate(
     log.debug("Exact duplicate screenshot skipped (hash match)");
     return true;
   }
-  const scrollY = await page.evaluate(() => window.scrollY).catch(() => 0);
-  const contentKey = `${page.url()}|${Math.floor(scrollY / 300)}`;
-  if (dedup.contentKeys.has(contentKey)) {
-    dedup.duplicateCount++;
-    log.debug(`Near-duplicate screenshot skipped (same page+scroll: ${contentKey})`);
-    return true;
-  }
   dedup.hashes.add(hash);
-  dedup.contentKeys.add(contentKey);
   return false;
 }
 
@@ -55,22 +46,29 @@ function isConsentRelatedAction(toolName: string, args: Record<string, unknown>)
 }
 
 let _geminiClient: OpenAI | null = null;
-function getGeminiClient() {
-  if (!_geminiClient) {
+let _geminiApiKey: string | null = null;
+function getGeminiClient(apiKey?: string) {
+  const effectiveApiKey = apiKey || process.env.GEMINI_API_KEY || "";
+  if (!effectiveApiKey) {
+    throw new Error("Gemini API key is required");
+  }
+
+  if (!_geminiClient || _geminiApiKey !== effectiveApiKey) {
     _geminiClient = new OpenAI({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey: effectiveApiKey,
       baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
     });
+    _geminiApiKey = effectiveApiKey;
   }
   return _geminiClient;
 }
 
-function getLLMClient(): { client: OpenAI; model: string } {
+function getLLMClient(apiKey?: string): { client: OpenAI; model: string } {
   const provider = getProvider();
   if (provider === "gemini-pro") {
-    return { client: getGeminiClient(), model: "gemini-3.1-flash-lite-preview" };
+    return { client: getGeminiClient(apiKey), model: "gemini-3.1-flash-lite-preview" };
   }
-  return { client: getGeminiClient(), model: "gemini-3.1-flash-lite-preview" };
+  return { client: getGeminiClient(apiKey), model: "gemini-3.1-flash-lite-preview" };
 }
 
 /**
@@ -81,9 +79,10 @@ async function agentLLMCall(
   messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
   tools: OpenAI.Chat.Completions.ChatCompletionTool[],
   toolChoice: "auto" | { type: "function"; function: { name: string } },
-  maxTokens: number
+  maxTokens: number,
+  apiKey?: string
 ) {
-  const { client, model } = getLLMClient();
+  const { client, model } = getLLMClient(apiKey);
   const maxRetries = 5;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
@@ -940,6 +939,7 @@ async function executeTool(
 
 export interface ExploreOptions {
   maxSteps?: number;
+  geminiApiKey?: string;
 }
 
 export async function runBrowserAgent(
@@ -955,7 +955,7 @@ export async function runBrowserAgent(
   const targetPath = parsedTarget.pathname.replace(/\/$/, "");
   const hasPathScope = targetPath.length > 0 && targetPath !== "/";
 
-  const { model: activeModel } = getLLMClient();
+  const { model: activeModel } = getLLMClient(options.geminiApiKey);
   log.info(`Starting browser agent`, { targetUrl, allowedOrigin, maxSteps, model: activeModel });
 
   try {
@@ -1103,7 +1103,8 @@ CONSENT / PLATFORM NOISE:
         step >= maxSteps + bonusSteps - 1
           ? { type: "function", function: { name: "finish_exploration" } }
           : "auto",
-        1000
+        1000,
+        options.geminiApiKey
       );
 
       const assistantMessage = response.choices[0].message;
@@ -1184,13 +1185,24 @@ CONSENT / PLATFORM NOISE:
       industry: (analysisResult?.industry as string) || "",
     };
 
-    const classifiedPages = Array.from(discoveredUrls)
-      .slice(0, 8)
-      .map((url) => ({
-        url,
-        pageType: inferPageTypeFromUrl(url),
-        confidence: inferPageTypeFromUrl(url) === "other" ? 72 : 95,
-      }));
+    const homepageUrl = `${allowedOrigin}/`;
+    const urlsForClassification = new Set<string>([homepageUrl, ...Array.from(discoveredUrls)]);
+
+    const classifiedPages = Array.from(urlsForClassification)
+      .map((url) => {
+        const inferredType = inferPageTypeFromUrl(url);
+        return {
+          url,
+          pageType: inferredType,
+          confidence: inferredType === "homepage" ? 99 : inferredType === "other" ? 72 : 95,
+        };
+      })
+      .sort((a, b) => {
+        if (a.pageType === "homepage" && b.pageType !== "homepage") return -1;
+        if (a.pageType !== "homepage" && b.pageType === "homepage") return 1;
+        return b.confidence - a.confidence;
+      })
+      .slice(0, 8);
 
     emit({
       type: "observation",
@@ -1223,7 +1235,7 @@ CONSENT / PLATFORM NOISE:
     });
 
     const personaStart = Date.now();
-    const personas = await generatePersonasFromAnalysis(analysis);
+    const personas = await generatePersonasFromAnalysis(analysis, options.geminiApiKey);
     log.timed(`Generated ${personas.length} personas`, Date.now() - personaStart);
     log.timed(`Full agent run complete`, Date.now() - runStart, {
       url: targetUrl,
@@ -1249,7 +1261,8 @@ CONSENT / PLATFORM NOISE:
 }
 
 async function generatePersonasFromAnalysis(
-  analysis: WebsiteAnalysis
+  analysis: WebsiteAnalysis,
+  apiKey?: string
 ): Promise<Persona[]> {
   const prompt = `Based on this website analysis, generate 10 diverse customer personas:
 
@@ -1276,7 +1289,7 @@ Respond with ONLY valid JSON array:
   "selected": boolean (first 8 true, rest false)
 }]`;
 
-  const { client, model } = getLLMClient();
+  const { client, model } = getLLMClient(apiKey);
   const maxRetries = 5;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
