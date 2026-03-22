@@ -35,6 +35,11 @@ export default function Home() {
   const simulationRef = useRef<HTMLDivElement>(null);
   const dashboardRef = useRef<HTMLDivElement>(null);
 
+  // Refs for canceling analysis
+  const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const analysisTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const simulationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Auto-scroll to new blocks
   useEffect(() => {
     const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
@@ -85,6 +90,20 @@ export default function Home() {
 
   const handleReturnToWorkspace = () => {
     setView("workspace");
+  };
+
+  const handleCancelAnalysis = () => {
+    if (analysisIntervalRef.current) clearInterval(analysisIntervalRef.current);
+    if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
+    if (simulationTimeoutRef.current) clearTimeout(simulationTimeoutRef.current);
+    
+    setStage("idle");
+    setView("workspace");
+    setCurrentUrl("");
+    setError(null);
+    setTraceEvents([]);
+    setSelectedUserIds([]);
+    setCurrentSession(null);
   };
 
   const handleOpenReport = (report: SavedReport) => {
@@ -155,7 +174,7 @@ export default function Home() {
     });
 
     let eventIndex = 0;
-    const interval = setInterval(() => {
+    analysisIntervalRef.current = setInterval(() => {
       if (eventIndex < customizedMockEvents.length) {
         setTraceEvents((prev) => {
           const next = [...prev, customizedMockEvents[eventIndex]];
@@ -171,18 +190,18 @@ export default function Home() {
         });
         eventIndex++;
       } else {
-        clearInterval(interval);
+        if (analysisIntervalRef.current) clearInterval(analysisIntervalRef.current);
       }
     }, 1200);
 
     try {
-      setTimeout(() => {
-        clearInterval(interval);
+      analysisTimeoutRef.current = setTimeout(() => {
+        if (analysisIntervalRef.current) clearInterval(analysisIntervalRef.current);
         setStage("selection");
         setCurrentSession(s => s ? { ...s, stage: "selection", pipelineData: mockPipelineResult } : null);
       }, (customizedMockEvents.length * 1200) + 500);
     } catch {
-      clearInterval(interval);
+      if (analysisIntervalRef.current) clearInterval(analysisIntervalRef.current);
       setError("Failed to fetch or analyze the website.");
       setStage("idle");
     }
@@ -193,7 +212,7 @@ export default function Home() {
     setStage("simulating");
     setCurrentSession(s => s ? { ...s, stage: "simulating", selectedUserIds: selectedIds } : null);
     
-    setTimeout(() => {
+    simulationTimeoutRef.current = setTimeout(() => {
       setStage("dashboard");
       setCurrentSession(s => s ? { 
         ...s, 
@@ -213,6 +232,7 @@ export default function Home() {
         onNewAnalysis={handleNewAnalysis} 
         onOpenDocuments={handleOpenDocuments} 
         onReturnToWorkspace={handleReturnToWorkspace}
+        onCancelAnalysis={handleCancelAnalysis}
       />
 
       <div className="flex-1 ml-64 relative min-h-screen overflow-y-auto">

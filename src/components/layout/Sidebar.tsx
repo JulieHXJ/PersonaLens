@@ -10,9 +10,10 @@ interface SidebarProps {
   onNewAnalysis: () => void;
   onOpenDocuments: () => void;
   onReturnToWorkspace?: () => void;
+  onCancelAnalysis?: () => void;
 }
 
-export function Sidebar({ currentStage, currentView = "workspace", currentUrl, onNewAnalysis, onOpenDocuments, onReturnToWorkspace }: SidebarProps) {
+export function Sidebar({ currentStage, currentView = "workspace", currentUrl, onNewAnalysis, onOpenDocuments, onReturnToWorkspace, onCancelAnalysis }: SidebarProps) {
   const getStageLabel = () => {
     switch (currentStage) {
       case "idle": return "Ready";
@@ -85,6 +86,17 @@ export function Sidebar({ currentStage, currentView = "workspace", currentUrl, o
               <span className="text-xs text-slate-400">Status</span>
               <span className={`text-xs font-semibold ${currentUrl && currentView === "workspace" ? "text-blue-400" : "text-slate-500"}`}>{getStageLabel()}</span>
             </div>
+            {currentUrl && onCancelAnalysis && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancelAnalysis();
+                }}
+                className="w-full mt-3 py-1.5 px-2 text-[10px] font-semibold border border-red-500/30 text-red-400 rounded hover:bg-red-500/10 transition-colors uppercase tracking-widest"
+              >
+                {currentStage === "dashboard" ? "Clear Workspace" : "Cancel Analysis"}
+              </button>
+            )}
           </div>
         </div>
       </div>
