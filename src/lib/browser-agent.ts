@@ -1,10 +1,53 @@
 import { chromium, Browser, Page } from "playwright";
 import OpenAI from "openai";
+import * as crypto from "crypto";
 import { Persona, WebsiteAnalysis } from "./types";
 import { createLogger } from "./logger";
 import { getProvider } from "./llm";
 
 const log = createLogger("agent:browser");
+
+interface ScreenshotDedup {
+  hashes: Set<string>;
+  contentKeys: Set<string>;
+  duplicateCount: number;
+}
+
+function createDedup(): ScreenshotDedup {
+  return { hashes: new Set(), contentKeys: new Set(), duplicateCount: 0 };
+}
+
+async function isScreenshotDuplicate(
+  page: Page,
+  buffer: Buffer,
+  dedup: ScreenshotDedup
+): Promise<boolean> {
+  const hash = crypto.createHash("md5").update(buffer).digest("hex");
+  if (dedup.hashes.has(hash)) {
+    dedup.duplicateCount++;
+    log.debug("Exact duplicate screenshot skipped (hash match)");
+    return true;
+  }
+  const scrollY = await page.evaluate(() => window.scrollY).catch(() => 0);
+  const contentKey = `${page.url()}|${Math.floor(scrollY / 300)}`;
+  if (dedup.contentKeys.has(contentKey)) {
+    dedup.duplicateCount++;
+    log.debug(`Near-duplicate screenshot skipped (same page+scroll: ${contentKey})`);
+    return true;
+  }
+  dedup.hashes.add(hash);
+  dedup.contentKeys.add(contentKey);
+  return false;
+}
+
+function isConsentRelatedAction(toolName: string, args: Record<string, unknown>): boolean {
+  if (toolName !== "click_element" && toolName !== "submit_form") return false;
+  const text = ((args.text as string) || (args.buttonText as string) || "").toLowerCase();
+  return ["cookie", "consent", "accept all", "reject all", "datenschutz",
+    "privacy", "ablehnen", "akzeptieren", "zustimmen", "agree",
+    "necessary", "i agree", "got it", "refuser", "accepter",
+    "alle akzeptieren", "alle ablehnen"].some((k) => text.includes(k));
+}
 
 let _geminiClient: OpenAI | null = null;
 function getGeminiClient() {
@@ -82,7 +125,7 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "navigate_to",
       description:
-        "Navigate the browser to a URL on the SAME domain. You will automatically receive a screenshot of the new page. Only URLs on the target website's domain are allowed.",
+        "Navigate to a URL that was previously discovered via get_page_links. ONLY works with URLs returned by get_page_links — any other URL will be rejected. Prefer click_element for navigation.",
       parameters: {
         type: "object",
         properties: {
@@ -97,7 +140,7 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "click_element",
       description:
-        "Click an element on the page by its visible text. You will automatically receive a screenshot after the click. Use for menus, buttons, and interactive elements.",
+        "Click a link or button on the page by its visible text. IMPORTANT: Use the text of the actual button/link (e.g. 'Download now', 'Learn more'), NOT the heading or description above it.",
       parameters: {
         type: "object",
         properties: {
@@ -303,20 +346,40 @@ async function dismissConsentBanners(page: Page): Promise<boolean> {
 
 /**
  * Take a screenshot, emit it to the client, and return the base64 string.
+ * Uses viewport capture (not fullPage) to avoid black/blank rendering issues
+ * common with lazy-loaded or GPU-heavy pages.
  */
 async function captureScreenshot(
   page: Page,
   emit: AgentEventCallback,
-  label: string
-): Promise<string> {
-  const buffer = await page.screenshot({ type: "jpeg", quality: 70 });
+  label: string,
+  dedup?: ScreenshotDedup
+): Promise<string | null> {
+  try {
+    await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(400);
+  } catch { /* proceed anyway */ }
+
+  const buffer = await page.screenshot({ type: "jpeg", quality: 60 });
+
+  const isBlank = buffer.length < 5000;
+  if (isBlank) {
+    log.warn("Screenshot appears blank/black, retrying after wait");
+    await page.waitForTimeout(2000);
+    const retry = await page.screenshot({ type: "jpeg", quality: 60 });
+    if (retry.length < 5000) {
+      log.warn("Screenshot still blank after retry, skipping");
+      return null;
+    }
+    if (dedup && await isScreenshotDuplicate(page, retry, dedup)) return null;
+    const base64 = retry.toString("base64");
+    emit({ type: "screenshot", message: label, screenshot: base64, timestamp: new Date().toISOString() });
+    return base64;
+  }
+
+  if (dedup && await isScreenshotDuplicate(page, buffer, dedup)) return null;
   const base64 = buffer.toString("base64");
-  emit({
-    type: "screenshot",
-    message: label,
-    screenshot: base64,
-    timestamp: new Date().toISOString(),
-  });
+  emit({ type: "screenshot", message: label, screenshot: base64, timestamp: new Date().toISOString() });
   return base64;
 }
 
@@ -351,7 +414,9 @@ async function executeTool(
   emit: AgentEventCallback,
   allowedOrigin: string,
   targetPath: string,
-  hasPathScope: boolean
+  hasPathScope: boolean,
+  dedup: ScreenshotDedup,
+  discoveredUrls: Set<string>
 ): Promise<{ text: string; screenshot?: string }> {
   const toolStart = Date.now();
   log.debug(`Tool call: ${toolName}`, args);
@@ -360,7 +425,6 @@ async function executeTool(
     case "navigate_to": {
       const url = args.url as string;
 
-      // URL scoping: reject navigation outside the allowed scope
       try {
         const dest = new URL(url);
         if (dest.origin !== allowedOrigin) {
@@ -380,19 +444,33 @@ async function executeTool(
         return { text: `Invalid URL: ${url}` };
       }
 
+      if (!discoveredUrls.has(url)) {
+        log.warn(`Blocked non-discovered URL: ${url}`);
+        return {
+          text: `Blocked: you can only navigate to URLs discovered via get_page_links. "${url}" was not found in any link list. Use click_element to click visible links/buttons on the page, or call get_page_links first to discover available URLs.`,
+        };
+      }
+
       emit({
         type: "action",
         message: `Navigating to ${url}`,
         timestamp: new Date().toISOString(),
       });
-      await page.goto(url, { waitUntil: "networkidle", timeout: 15000 });
+      const navResponse = await page.goto(url, { waitUntil: "networkidle", timeout: 15000 });
+      const httpStatus = navResponse?.status() ?? 0;
+      if (httpStatus >= 400) {
+        log.warn(`Navigation returned HTTP ${httpStatus}: ${url}`);
+        return {
+          text: `HTTP ${httpStatus} — this URL does not exist or is not accessible. This is NOT a website bug — you navigated to a wrong URL. Use click_element to follow actual links on the page instead.`,
+        };
+      }
       await page.waitForTimeout(1000);
       await dismissConsentBanners(page);
       const title = await page.title();
-      const screenshot = await captureScreenshot(page, emit, `Page: ${title}`);
+      const screenshot = await captureScreenshot(page, emit, `Page: ${title}`, dedup);
       return {
-        text: `Navigated to ${url}. Page title: "${title}". A screenshot is attached.`,
-        screenshot,
+        text: `Navigated to ${url}. Page title: "${title}".${screenshot ? " A screenshot is attached." : " (Page unchanged from previous view)"}`,
+        screenshot: screenshot || undefined,
       };
     }
 
@@ -403,22 +481,38 @@ async function executeTool(
         message: `Clicking "${text}"`,
         timestamp: new Date().toISOString(),
       });
+      const urlBefore = page.url();
       try {
-        await page.getByText(text, { exact: false }).first().click();
-        await page.waitForLoadState("networkidle", { timeout: 10000 });
+        let clicked = false;
+        // Prefer interactive elements: <a>, <button>, [role="button"], [role="link"]
+        for (const selector of ['a', 'button', '[role="button"]', '[role="link"]']) {
+          const el = page.locator(`${selector}:has-text("${text.replace(/"/g, '\\"')}")`).first();
+          if (await el.isVisible({ timeout: 800 }).catch(() => false)) {
+            await el.click();
+            clicked = true;
+            break;
+          }
+        }
+        if (!clicked) {
+          await page.getByText(text, { exact: false }).first().click();
+        }
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
         await page.waitForTimeout(800);
         const newUrl = page.url();
         const title = await page.title();
-        const screenshot = await captureScreenshot(page, emit, `After clicking "${text}"`);
-        return {
-          text: `Clicked "${text}". Now on: ${newUrl} (title: "${title}"). A screenshot is attached.`,
-          screenshot,
-        };
+        const samePage = newUrl === urlBefore;
+        const screenshot = await captureScreenshot(page, emit, `After clicking "${text}"`, dedup);
+        let resultMsg = `Clicked "${text}". Now on: ${newUrl} (title: "${title}").`;
+        if (samePage) {
+          resultMsg += " NOTE: The page did NOT change — you may have clicked a non-interactive element (like a heading or label). Look for the actual button or link nearby (e.g. 'Download now', 'Learn more', 'Read more') and click THAT instead.";
+        }
+        if (screenshot) resultMsg += " A screenshot is attached.";
+        return { text: resultMsg, screenshot: screenshot || undefined };
       } catch {
-        const failScreenshot = await captureScreenshot(page, emit, `Failed to click "${text}"`);
+        const failScreenshot = await captureScreenshot(page, emit, `Failed to click "${text}"`, dedup);
         return {
-          text: `Could not find or click element with text "${text}". Try a different text or use navigate_to.`,
-          screenshot: failScreenshot,
+          text: `Could not find or click element with text "${text}". Try a different text, or use get_page_links to see available links.`,
+          screenshot: failScreenshot || undefined,
         };
       }
     }
@@ -469,8 +563,8 @@ async function executeTool(
           buttons: buttons.slice(0, 10),
         };
       });
-      const screenshot = await captureScreenshot(page, emit, `Content extracted from ${content.url}`);
-      return { text: JSON.stringify(content, null, 2), screenshot };
+      const screenshot = await captureScreenshot(page, emit, `Content extracted from ${content.url}`, dedup);
+      return { text: JSON.stringify(content, null, 2), screenshot: screenshot || undefined };
     }
 
     case "scroll_down": {
@@ -481,10 +575,10 @@ async function executeTool(
       });
       await page.evaluate(() => window.scrollBy(0, 800));
       await page.waitForTimeout(500);
-      const screenshot = await captureScreenshot(page, emit, `Scrolled down on ${page.url()}`);
+      const screenshot = await captureScreenshot(page, emit, `Scrolled down on ${page.url()}`, dedup);
       return {
-        text: "Scrolled down 800px. A screenshot of the new viewport is attached.",
-        screenshot,
+        text: `Scrolled down 800px.${screenshot ? " A screenshot of the new viewport is attached." : " (View unchanged)"}`,
+        screenshot: screenshot || undefined,
       };
     }
 
@@ -507,8 +601,9 @@ async function executeTool(
           .filter((v, i, a) => a.findIndex((x) => x.href === v.href) === i)
           .slice(0, 25);
       });
-      const linksScreenshot = await captureScreenshot(page, emit, `Links on ${page.url()}`);
-      return { text: JSON.stringify(links, null, 2), screenshot: linksScreenshot };
+      for (const link of links) discoveredUrls.add(link.href);
+      const linksScreenshot = await captureScreenshot(page, emit, `Links on ${page.url()}`, dedup);
+      return { text: JSON.stringify(links, null, 2), screenshot: linksScreenshot || undefined };
     }
 
     case "fill_input": {
@@ -579,10 +674,10 @@ async function executeTool(
             text: `Could not find input "${placeholder || fieldType}". Try extract_page_content to see available form fields.`,
           };
         }
-        const screenshot = await captureScreenshot(page, emit, `Filled "${placeholder}"`);
+        const screenshot = await captureScreenshot(page, emit, `Filled "${placeholder}"`, dedup);
         return {
           text: `Filled input "${placeholder}" with "${value}". Screenshot attached.`,
-          screenshot,
+          screenshot: screenshot || undefined,
         };
       } catch {
         return {
@@ -604,10 +699,10 @@ async function executeTool(
         await page.waitForTimeout(1000);
         const newUrl = page.url();
         const title = await page.title();
-        const screenshot = await captureScreenshot(page, emit, `After submitting "${buttonText}"`);
+        const screenshot = await captureScreenshot(page, emit, `After submitting "${buttonText}"`, dedup);
         return {
           text: `Clicked "${buttonText}". Now on: ${newUrl} (title: "${title}"). Screenshot attached.`,
-          screenshot,
+          screenshot: screenshot || undefined,
         };
       } catch {
         return {
@@ -631,21 +726,25 @@ async function executeTool(
   }
 }
 
+export interface ExploreOptions {
+  maxSteps?: number;
+}
+
 export async function runBrowserAgent(
   targetUrl: string,
-  emit: AgentEventCallback
+  emit: AgentEventCallback,
+  options: ExploreOptions = {}
 ): Promise<{ analysis: WebsiteAnalysis; personas: Persona[] }> {
   const runStart = Date.now();
+  const maxSteps = options.maxSteps || MAX_STEPS;
   let browser: Browser | null = null;
   const parsedTarget = new URL(targetUrl);
   const allowedOrigin = parsedTarget.origin;
-  // Use the target path as scope — e.g. "/hebammen" means only URLs starting with "/hebammen" are allowed
-  // If the path is just "/" or empty, allow the full domain
   const targetPath = parsedTarget.pathname.replace(/\/$/, "");
   const hasPathScope = targetPath.length > 0 && targetPath !== "/";
 
   const { model: activeModel } = getLLMClient();
-  log.info(`Starting browser agent`, { targetUrl, allowedOrigin, maxSteps: MAX_STEPS, model: activeModel });
+  log.info(`Starting browser agent`, { targetUrl, allowedOrigin, maxSteps, model: activeModel });
 
   try {
     emit({
@@ -670,7 +769,9 @@ export async function runBrowserAgent(
     await dismissConsentBanners(page);
 
     // Take initial screenshot
-    const initialBase64 = await captureScreenshot(page, emit, `Initial view of ${targetUrl}`);
+    const dedup = createDedup();
+    const discoveredUrls = new Set<string>([targetUrl]);
+    const initialBase64 = (await captureScreenshot(page, emit, `Initial view of ${targetUrl}`, dedup))!;
 
     // Extract initial content
     const initialContent = await page.evaluate(() => {
@@ -697,20 +798,31 @@ TARGET: ${targetUrl}
 ${hasPathScope ? `SCOPE: You may ONLY visit URLs that start with ${allowedOrigin}${targetPath}. Do NOT navigate to the homepage, root URL, or other sections of the site. If the page has links to other areas, IGNORE them.` : `SCOPE: Stay on ${allowedOrigin}. Do not navigate to external sites.`}
 
 RULES:
-- After every navigate_to, click_element, and scroll_down you automatically receive a screenshot — use it to visually understand the page.
+- After every navigate_to, click_element, and scroll_down you normally receive a screenshot. If the page looks the same as before, the screenshot may be skipped — move on to a DIFFERENT page or action instead of retrying.
 - Do NOT navigate to the homepage or root URL. Focus only on the target page and its subpages.
 - Explore the target page thoroughly: scroll down, extract content, visit linked subpages within the same section.
-- You have a maximum of ${MAX_STEPS} actions — be efficient.
+- You have a maximum of ${maxSteps} actions — be efficient.
 - When you have enough understanding, call finish_exploration with your analysis.
 
-STRATEGY:
+STRATEGY — Browse like a real user:
 1. Study the initial page carefully. If you see a login form with demo/test credentials on the page, LOG IN FIRST using fill_input (use fieldType='password' for password fields) and submit_form.
-2. After logging in, systematically visit EVERY page in the navigation menu.
+2. Navigate by CLICKING visible links, buttons, and menu items using click_element — just like a real person would. This is your PRIMARY navigation method.
 3. On each page, scroll down to see all content. Click buttons to discover features.
 4. Look for special features like AI assistants, floating action buttons (bottom-right corner), modals, or interactive elements — TEST THEM.
 5. Try actual workflows: create something, edit something, navigate flows end-to-end.
 6. Use extract_page_content when you need to read detailed text, form fields, or button labels.
-7. Your analysis must cover the FULL product behind the login, not just the login page.`,
+7. Your analysis must cover the FULL product behind the login, not just the login page.
+
+NAVIGATION RULES:
+- Your PRIMARY tool for moving between pages is click_element. Click nav links, buttons, cards — anything a real user would click.
+- navigate_to ONLY works for URLs previously returned by get_page_links. If you call navigate_to with a URL you made up, it will be rejected.
+- NEVER construct or guess URLs like "/company/about-us" or "/pricing". You WILL get them wrong.
+- If you need to find a specific page, use get_page_links to see what actually exists, then click_element or navigate_to one of those exact URLs.
+
+CLICKING RULES:
+- When using click_element, click the actual BUTTON or LINK text, not the heading or description above it. For example, if you see a card with heading "CSRD Guide" and a button "Download now", click "Download now" — NOT "CSRD Guide".
+- If a click does not change the page, you probably clicked a non-interactive element. Look at the screenshot for the actual button or link nearby and click THAT.
+- Common clickable texts: "Learn more", "Read more", "Download now", "Get started", "Contact us", "Sign up", "View details", "See more".`,
       },
       {
         role: "user",
@@ -733,21 +845,22 @@ STRATEGY:
     let analysisResult: Record<string, unknown> | null = null;
 
     // Agent loop
-    for (let step = 0; step < MAX_STEPS; step++) {
+    let bonusSteps = 0;
+    for (let step = 0; step < maxSteps + bonusSteps; step++) {
       if (step > 0) {
         await new Promise((r) => setTimeout(r, 5000));
       }
 
       emit({
         type: "thinking",
-        message: `Agent thinking... (step ${step + 1}/${MAX_STEPS})`,
+        message: `Agent exploring... (action ${step + 1} of ${maxSteps})`,
         timestamp: new Date().toISOString(),
       });
 
       const response = await agentLLMCall(
         messages,
         TOOLS,
-        step >= MAX_STEPS - 1
+        step >= maxSteps + bonusSteps - 1
           ? { type: "function", function: { name: "finish_exploration" } }
           : "auto",
         1000
@@ -770,7 +883,7 @@ STRATEGY:
           const toolArgs = JSON.parse(toolCall.function.arguments || "{}");
 
           const toolStart = Date.now();
-          const result = await executeTool(page, toolName, toolArgs, emit, allowedOrigin, targetPath, hasPathScope);
+          const result = await executeTool(page, toolName, toolArgs, emit, allowedOrigin, targetPath, hasPathScope, dedup, discoveredUrls);
           log.timed(`Tool ${toolName} completed`, Date.now() - toolStart, {
             hasScreenshot: !!result.screenshot,
             resultLength: result.text.length,
@@ -796,6 +909,17 @@ STRATEGY:
           }
         }
 
+        const wasConsentStep = assistantMessage.tool_calls.some((tc) => {
+          if (tc.type !== "function") return false;
+          try {
+            return isConsentRelatedAction(tc.function.name, JSON.parse(tc.function.arguments || "{}"));
+          } catch { return false; }
+        });
+        if (wasConsentStep && bonusSteps < 10) {
+          bonusSteps++;
+          log.debug(`Consent-related step, bonus step awarded (total: ${bonusSteps})`);
+        }
+
         if (analysisResult) break;
       } else if (assistantMessage.content) {
         emit({
@@ -809,6 +933,7 @@ STRATEGY:
     await browser.close();
     browser = null;
     log.timed(`Browser exploration completed`, Date.now() - runStart);
+    log.info(`Screenshot dedup: ${dedup.duplicateCount} duplicates skipped, ${bonusSteps} bonus steps from consent actions`);
 
     const analysis: WebsiteAnalysis = {
       url: targetUrl,

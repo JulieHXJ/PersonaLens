@@ -1,9 +1,50 @@
 import { chromium, Browser, Page } from "playwright";
 import OpenAI from "openai";
+import * as crypto from "crypto";
 import { Persona, WebsiteAnalysis } from "./types";
 import { createLogger } from "./logger";
 
 const log = createLogger("agent:persona-tester");
+
+interface ScreenshotDedup {
+  hashes: Set<string>;
+  contentKeys: Set<string>;
+  duplicateCount: number;
+}
+
+function createDedup(): ScreenshotDedup {
+  return { hashes: new Set(), contentKeys: new Set(), duplicateCount: 0 };
+}
+
+async function isScreenshotDuplicate(
+  page: Page,
+  buffer: Buffer,
+  dedup: ScreenshotDedup
+): Promise<boolean> {
+  const hash = crypto.createHash("md5").update(buffer).digest("hex");
+  if (dedup.hashes.has(hash)) {
+    dedup.duplicateCount++;
+    return true;
+  }
+  const scrollY = await page.evaluate(() => window.scrollY).catch(() => 0);
+  const contentKey = `${page.url()}|${Math.floor(scrollY / 300)}`;
+  if (dedup.contentKeys.has(contentKey)) {
+    dedup.duplicateCount++;
+    return true;
+  }
+  dedup.hashes.add(hash);
+  dedup.contentKeys.add(contentKey);
+  return false;
+}
+
+function isConsentRelatedAction(toolName: string, args: Record<string, unknown>): boolean {
+  if (toolName !== "click_element" && toolName !== "submit_form") return false;
+  const text = ((args.text as string) || (args.buttonText as string) || "").toLowerCase();
+  return ["cookie", "consent", "accept all", "reject all", "datenschutz",
+    "privacy", "ablehnen", "akzeptieren", "zustimmen", "agree",
+    "necessary", "i agree", "got it", "refuser", "accepter",
+    "alle akzeptieren", "alle ablehnen"].some((k) => text.includes(k));
+}
 
 let _gemini: OpenAI | null = null;
 function getGemini() {
@@ -26,6 +67,7 @@ export interface DetailedFinding {
   description: string;
   pageUrl?: string;
   evidence?: string;
+  rootCauseType?: "system_bug" | "ux_friction" | "semantic_confusion";
 }
 
 export interface BetaTestResult {
@@ -78,7 +120,7 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "click_element",
-      description: "Click a button, link, or interactive element by its visible text. You'll receive a screenshot.",
+      description: "Click a button or link by its visible text. IMPORTANT: Use the text of the actual button/link (e.g. 'Download now', 'Learn more'), NOT the heading or description above it.",
       parameters: {
         type: "object",
         properties: {
@@ -124,13 +166,13 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "give_feedback",
-      description: "Share your honest, critical feedback about what you just saw or tried. Call this AFTER each action to document your reaction. Be EXTREMELY SPECIFIC: name the exact element, link text, button label, section name, or URL path that caused the issue.",
+      description: "Share your honest, critical feedback about what you just saw or tried. Call this AFTER each action to document your reaction. Be EXTREMELY SPECIFIC: name the exact element, link text, button label, section name, or URL path. IMPORTANT: Always set rootCauseType to distinguish real bugs from your own click errors.",
       parameters: {
         type: "object",
         properties: {
           feedback: {
             type: "string",
-            description: "Your honest, detailed reaction. BE VERY SPECIFIC: name the exact link text, button label, section heading, or element that you're referring to. Example: 'The \"Pricing\" link in the top nav leads to a 404 page' instead of 'some links are broken'. Include the exact text you see on screen.",
+            description: "Your honest, detailed reaction. Name the exact link text, button label, or element. Example: 'The \"Pricing\" link in the top nav leads to a 404' instead of 'some links are broken'.",
           },
           category: {
             type: "string",
@@ -142,8 +184,13 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
             enum: ["critical", "major", "minor", "positive"],
             description: "How severe is this issue (or positive if it's praise)",
           },
+          rootCauseType: {
+            type: "string",
+            enum: ["system_bug", "ux_friction", "semantic_confusion"],
+            description: "Root cause: system_bug = real functional failure; ux_friction = feature works but hard to find/use; semantic_confusion = you clicked the wrong element or misunderstood the UI (your mistake)",
+          },
         },
-        required: ["feedback", "category", "severity"],
+        required: ["feedback", "category", "severity", "rootCauseType"],
       },
     },
   },
@@ -298,8 +345,23 @@ async function dismissConsentBanners(page: Page): Promise<boolean> {
   return false;
 }
 
-async function captureScreenshot(page: Page): Promise<string> {
-  const buffer = await page.screenshot({ type: "jpeg", quality: 70 });
+async function captureScreenshot(page: Page, dedup?: ScreenshotDedup): Promise<string | null> {
+  try {
+    await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(400);
+  } catch { /* proceed anyway */ }
+
+  const buffer = await page.screenshot({ type: "jpeg", quality: 60 });
+
+  if (buffer.length < 5000) {
+    await page.waitForTimeout(2000);
+    const retry = await page.screenshot({ type: "jpeg", quality: 60 });
+    if (retry.length < 5000) return null;
+    if (dedup && await isScreenshotDuplicate(page, retry, dedup)) return null;
+    return retry.toString("base64");
+  }
+
+  if (dedup && await isScreenshotDuplicate(page, buffer, dedup)) return null;
   return buffer.toString("base64");
 }
 
@@ -347,7 +409,7 @@ export async function runPersonaTest(
   const targetUrl = analysis.url;
   const allowedOrigin = new URL(targetUrl).origin;
   const actionLog: BetaTestResult["actionLog"] = [];
-  const feedbackItems: { feedback: string; category: string; severity: string; pageUrl: string }[] = [];
+  const feedbackItems: { feedback: string; category: string; severity: string; pageUrl: string; rootCauseType: string }[] = [];
   const vp = VIEWPORTS[device];
 
   log.info(`Starting persona test: ${persona.name} (${device})`, { personaId: persona.id, url: targetUrl, device });
@@ -367,6 +429,8 @@ export async function runPersonaTest(
     await page.waitForTimeout(1500);
 
     await dismissConsentBanners(page);
+
+    const dedup = createDedup();
 
     const initialContent = await page.evaluate(() => {
       const headings: string[] = [];
@@ -406,20 +470,37 @@ YOUR TESTING APPROACH:
 
 IMPORTANT:
 - You are NOT impressed by default. You have used many tools before and have HIGH standards.
-- If a button does nothing, that's a bug. Report it with category "bug".
-- If you don't understand something within 5 seconds, report it as "confusion".
 - Compare to tools you currently use. Be honest about whether this is better or worse.
 - Try to break things: enter weird data, click things in wrong order, test edge cases.
 - You stay on the same domain: ${allowedOrigin}
 - After thoroughly testing all features, call finish_testing with your complete assessment.
 - You have max ${MAX_STEPS} actions — use them all to test as much as possible.
 
-CRITICAL — BE SPECIFIC IN FEEDBACK:
+INTERACTION PRECISION — Distinguish CTA from descriptive text:
+- Web pages contain two types of text: (1) INTERACTIVE elements — buttons, links, CTAs with short action verbs like "Download now", "Learn more", "Get started", "Sign up" — and (2) DESCRIPTIVE text — headings, labels, paragraphs, promotional copy.
+- ONLY click interactive elements. A heading like "CSRD for Dummies" or a description like "Download your go-to resource for effortless implementation" is NOT a button — the actual CTA is the "Download now" button nearby.
+- If you see a card/banner with a long title and a short action button, ALWAYS click the action button text, NEVER the title.
+
+SELF-CORRECTION PROTOCOL — Before reporting any bug:
+1. If a click "did nothing", STOP. Ask yourself: "Did I click a heading, label, or description instead of the actual button/link?" If YES, find the real CTA nearby and try THAT first.
+2. If click_element tells you "the page did NOT change", that almost always means you clicked decorative text. Retry with the actual button text before reporting anything.
+3. Only report category="bug" if you clicked a clearly interactive element (a styled button, an underlined link, a navigation menu item) AND it failed. Use rootCauseType="system_bug" for these.
+4. If the issue is that you couldn't FIND the right button or the UI made it unclear WHERE to click, report category="ux_issue" with rootCauseType="ux_friction".
+5. NEVER report "clicking [long descriptive sentence] did nothing" as a bug — that is ALWAYS your own click target error, not a website bug.
+
+FEEDBACK QUALITY:
 - When reporting issues, name the EXACT element: link text, button label, section heading, page URL.
 - BAD: "some links are broken" — GOOD: "The 'Pricing' link in the main navigation leads to a 404 page at /pricing"
 - BAD: "the layout is weird" — GOOD: "On the 'Features' page, the three-column card grid collapses into overlapping elements below 1024px"
-- BAD: "confusing navigation" — GOOD: "The 'Resources' dropdown in the header has 8 items with no grouping, making it hard to find 'API Docs'"
-- Always note which page you're on and what specific element you're referring to.`,
+- Always note which page you're on and what specific element you're referring to.
+- When using give_feedback, always set the rootCauseType field:
+  • "system_bug" — a real functional failure (button click leads to error, 404 from a real link, form submission fails)
+  • "ux_friction" — the feature works but is hard to find or use (confusing layout, unclear labels, poor discoverability)
+  • "semantic_confusion" — you misunderstood what was clickable or what a UI element does (your mistake, not the website's)
+
+NAVIGATION RULES:
+- NEVER construct or guess URLs. Use click_element to click visible links/buttons.
+- If navigate_to returns a 404/error, it means YOU used a wrong URL — do NOT report it as a bug.`,
       },
       {
         role: "user",
@@ -429,12 +510,13 @@ CRITICAL — BE SPECIFIC IN FEEDBACK:
 
     let summaryResult: Record<string, unknown> | null = null;
 
-    for (let step = 0; step < MAX_STEPS; step++) {
+    let bonusSteps = 0;
+    for (let step = 0; step < MAX_STEPS + bonusSteps; step++) {
       if (step > 0) {
         await new Promise((r) => setTimeout(r, 5000));
       }
 
-      onEvent?.(`${persona.name} thinking... (step ${step + 1}/${MAX_STEPS})`);
+      onEvent?.(`${persona.name} thinking... (step ${step + 1}/${MAX_STEPS + bonusSteps})`);
 
       let response;
       for (let attempt = 0; attempt < 5; attempt++) {
@@ -444,7 +526,7 @@ CRITICAL — BE SPECIFIC IN FEEDBACK:
             messages,
             tools: TOOLS,
             tool_choice:
-              step >= MAX_STEPS - 1
+              step >= MAX_STEPS + bonusSteps - 1
                 ? { type: "function", function: { name: "finish_testing" } }
                 : "auto",
             max_tokens: 1500,
@@ -476,6 +558,7 @@ CRITICAL — BE SPECIFIC IN FEEDBACK:
           log.debug(`${persona.name} tool: ${name}`, args);
 
           if (name === "finish_testing") {
+            onEvent?.(`${persona.name} finishing test...`);
             summaryResult = args;
             messages.push({ role: "tool", tool_call_id: fn.id, content: "Testing complete." });
             break;
@@ -483,10 +566,25 @@ CRITICAL — BE SPECIFIC IN FEEDBACK:
 
           if (name === "give_feedback") {
             const currentUrl = page.url();
-            feedbackItems.push({ ...args, pageUrl: currentUrl });
-            actionLog.push({ action: `[${args.category}/${args.severity}] on ${currentUrl}`, feedback: args.feedback });
-            onEvent?.(`${persona.name}: "${args.feedback.substring(0, 80)}..."`);
-            messages.push({ role: "tool", tool_call_id: fn.id, content: "Feedback recorded. Continue testing." });
+            const severity = (args.severity as string) || "info";
+            const category = (args.category as string) || "";
+            const rootCause = (args.rootCauseType as string) || "system_bug";
+            feedbackItems.push({
+              feedback: args.feedback as string,
+              category,
+              severity,
+              pageUrl: currentUrl,
+              rootCauseType: rootCause,
+            });
+            actionLog.push({ action: `[${category}/${severity}/${rootCause}] on ${currentUrl}`, feedback: args.feedback as string });
+            const causeLabel = rootCause === "semantic_confusion" ? "🔍" : rootCause === "ux_friction" ? "⚡" : "🐛";
+            onEvent?.(`${causeLabel} [${severity}] ${persona.name}: "${(args.feedback as string).substring(0, 120)}"`);
+
+            let ack = "Feedback recorded. Continue testing.";
+            if (rootCause === "semantic_confusion") {
+              ack = "Feedback recorded. NOTE: You marked this as semantic_confusion — good self-awareness. This will be classified as a UX observation, not a bug. Continue testing.";
+            }
+            messages.push({ role: "tool", tool_call_id: fn.id, content: ack });
             continue;
           }
 
@@ -497,32 +595,59 @@ CRITICAL — BE SPECIFIC IN FEEDBACK:
           try {
             switch (name) {
               case "navigate_to": {
+                onEvent?.(`→ ${persona.name} navigating to ${args.url}`);
                 const dest = new URL(args.url as string);
                 if (dest.origin !== allowedOrigin) {
                   resultText = `Blocked: ${args.url} is outside the allowed domain.`;
                   break;
                 }
-                await page.goto(args.url, { waitUntil: "networkidle", timeout: 15000 });
+                const navResp = await page.goto(args.url, { waitUntil: "networkidle", timeout: 15000 });
+                const navStatus = navResp?.status() ?? 0;
+                if (navStatus >= 400) {
+                  log.warn(`Navigation returned HTTP ${navStatus}: ${args.url}`);
+                  resultText = `HTTP ${navStatus} — this URL does not exist. This is NOT a website bug — you navigated to a wrong URL. Use get_page_links or click_element to find the correct links on the site. Do NOT report this as a bug.`;
+                  break;
+                }
                 await page.waitForTimeout(1000);
                 await dismissConsentBanners(page);
-                screenshot = await captureScreenshot(page);
-                resultText = `Navigated to ${args.url}. Title: "${await page.title()}". Screenshot attached.`;
+                screenshot = await captureScreenshot(page, dedup) || undefined;
+                resultText = `Navigated to ${args.url}. Title: "${await page.title()}".${screenshot ? " Screenshot attached." : " (Page unchanged)"}`;
                 break;
               }
               case "click_element": {
+                const clickText = args.text as string;
+                onEvent?.(`→ ${persona.name} clicking "${clickText}"`);
+                const urlBeforeClick = page.url();
                 try {
-                  await page.getByText(args.text, { exact: false }).first().click();
-                  await page.waitForLoadState("networkidle", { timeout: 10000 });
+                  let clicked = false;
+                  for (const selector of ['a', 'button', '[role="button"]', '[role="link"]']) {
+                    const el = page.locator(`${selector}:has-text("${clickText.replace(/"/g, '\\"')}")`).first();
+                    if (await el.isVisible({ timeout: 800 }).catch(() => false)) {
+                      await el.click();
+                      clicked = true;
+                      break;
+                    }
+                  }
+                  if (!clicked) {
+                    await page.getByText(clickText, { exact: false }).first().click();
+                  }
+                  await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
                   await page.waitForTimeout(800);
-                  screenshot = await captureScreenshot(page);
-                  resultText = `Clicked "${args.text}". Now on: ${page.url()}. Screenshot attached.`;
+                  screenshot = await captureScreenshot(page, dedup) || undefined;
+                  const samePage = page.url() === urlBeforeClick;
+                  resultText = `Clicked "${clickText}". Now on: ${page.url()}.`;
+                  if (samePage) {
+                    resultText += " NOTE: The page did NOT change — you may have clicked a non-interactive element (heading or label). Look for the actual button or link nearby (e.g. 'Download now', 'Learn more') and click THAT instead. Do NOT report this as a bug unless you also tried the actual button.";
+                  }
+                  if (screenshot) resultText += " Screenshot attached.";
                 } catch {
-                  screenshot = await captureScreenshot(page);
-                  resultText = `Could not click "${args.text}" — element not found or not clickable. This might be a bug. Screenshot attached.`;
+                  screenshot = await captureScreenshot(page, dedup) || undefined;
+                  resultText = `Could not click "${clickText}" — element not found or not clickable.${screenshot ? " Screenshot attached." : ""}`;
                 }
                 break;
               }
               case "fill_input": {
+                onEvent?.(`→ ${persona.name} filling input "${args.placeholder || args.fieldType || "field"}"`);
                 let filled = false;
                 const fType = args.fieldType as string | undefined;
                 const ph = args.placeholder as string | undefined;
@@ -555,7 +680,7 @@ CRITICAL — BE SPECIFIC IN FEEDBACK:
                   if (await fallback.isVisible({ timeout: 1000 })) { await fallback.fill(val); filled = true; }
                 } catch { /* give up */ }
                 if (filled) {
-                  screenshot = await captureScreenshot(page);
+                  screenshot = await captureScreenshot(page, dedup) || undefined;
                   resultText = `Filled "${ph || fType || "input"}" with "${val}". Screenshot attached.`;
                 } else {
                   resultText = `Could not find input "${ph || fType}". This might be a bug.`;
@@ -563,13 +688,16 @@ CRITICAL — BE SPECIFIC IN FEEDBACK:
                 break;
               }
               case "scroll_down": {
+                onEvent?.(`→ ${persona.name} scrolling down`);
                 await page.evaluate(() => window.scrollBy(0, 800));
                 await page.waitForTimeout(500);
-                screenshot = await captureScreenshot(page);
-                resultText = "Scrolled down. Screenshot attached.";
+                screenshot = await captureScreenshot(page, dedup) || undefined;
+                resultText = `Scrolled down.${screenshot ? " Screenshot attached." : " (View unchanged)"}`;
                 break;
               }
               case "extract_page_content": {
+                onEvent?.(`→ ${persona.name} reading page content`);
+
                 const content = await page.evaluate(() => {
                   const h: string[] = [];
                   document.querySelectorAll("h1,h2,h3").forEach((el) => {
@@ -595,6 +723,18 @@ CRITICAL — BE SPECIFIC IN FEEDBACK:
 
           messages.push({ role: "tool", tool_call_id: fn.id, content: resultText });
         }
+        const wasConsentStep = msg.tool_calls?.some((tc) => {
+          if (tc.type !== "function") return false;
+          try {
+            const fn = tc as { type: "function"; function: { name: string; arguments: string } };
+            return isConsentRelatedAction(fn.function.name, JSON.parse(fn.function.arguments || "{}"));
+          } catch { return false; }
+        });
+        if (wasConsentStep && bonusSteps < 10) {
+          bonusSteps++;
+          log.debug(`Consent step by ${persona.name}, bonus step (${bonusSteps})`);
+        }
+
         if (summaryResult) break;
       } else if (msg.content) {
         onEvent?.(`${persona.name}: ${msg.content.substring(0, 100)}`);
@@ -616,6 +756,7 @@ CRITICAL — BE SPECIFIC IN FEEDBACK:
         description: f.feedback,
         pageUrl: f.pageUrl,
         evidence: f.feedback,
+        rootCauseType: (f.rootCauseType || "system_bug") as "system_bug" | "ux_friction" | "semantic_confusion",
       }));
 
     const result: BetaTestResult = {

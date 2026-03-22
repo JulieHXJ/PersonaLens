@@ -7,6 +7,40 @@ import { MOCK_ANALYSIS, MOCK_PERSONAS } from "@/lib/mock-personas";
 
 type Step = "url" | "exploring" | "review";
 
+const SCAN_TIERS = [
+  {
+    id: "quick",
+    name: "Quick Scan",
+    steps: 10,
+    price: "Free",
+    priceNote: "Basic exploration",
+    icon: "bolt",
+    desc: "Fast overview — 5–8 pages",
+    features: ["Full-page screenshots", "Core page analysis", "~5 min"],
+  },
+  {
+    id: "standard",
+    name: "Standard",
+    steps: 25,
+    price: "$5",
+    priceNote: "per scan",
+    icon: "explore",
+    popular: true,
+    desc: "Thorough exploration — 12–18 pages",
+    features: ["Full-page screenshots", "Deep analysis", "~12 min"],
+  },
+  {
+    id: "deep",
+    name: "Deep Dive",
+    steps: 40,
+    price: "$15",
+    priceNote: "per scan",
+    icon: "query_stats",
+    desc: "Comprehensive audit — 20–30+ pages",
+    features: ["Full-page screenshots", "Maximum coverage", "~20 min"],
+  },
+] as const;
+
 interface AgentEvent {
   type: "action" | "observation" | "screenshot" | "thinking" | "done" | "error" | "result";
   message: string;
@@ -40,6 +74,7 @@ export default function ConfigureRunPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [explorationId, setExplorationId] = useState<string>("");
   const [expandScreenshots, setExpandScreenshots] = useState(false);
+  const [scanTier, setScanTier] = useState("standard");
   const logRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -94,7 +129,7 @@ export default function ConfigureRunPage() {
       const res = await fetch("/api/explore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, maxSteps: SCAN_TIERS.find((t) => t.id === scanTier)?.steps || 25 }),
       });
 
       if (!res.ok) {
@@ -292,40 +327,97 @@ export default function ConfigureRunPage() {
               <p className="mt-2 text-xs text-error font-mono">{error}</p>
             )}
 
+            {/* Scan Depth Selector */}
+            <div className="mt-10">
+              <label className="block text-xs font-mono text-on-surface-variant/60 uppercase tracking-widest mb-4">
+                02. Scan Depth
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {SCAN_TIERS.map((tier) => (
+                  <button
+                    key={tier.id}
+                    onClick={() => setScanTier(tier.id)}
+                    className={`relative text-left p-5 rounded-xl border-2 transition-all ${
+                      scanTier === tier.id
+                        ? "border-primary bg-primary/5 shadow-[0_0_20px_rgba(164,201,255,0.08)]"
+                        : "border-outline-variant/15 bg-surface-container-low hover:border-outline-variant/30"
+                    }`}
+                  >
+                    {tier.popular && (
+                      <span className="absolute -top-2.5 right-4 px-3 py-0.5 bg-primary text-on-primary text-[9px] font-bold font-mono uppercase rounded-full tracking-wider">
+                        Popular
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`material-symbols-outlined text-lg ${scanTier === tier.id ? "text-primary" : "text-on-surface-variant"}`}>
+                        {tier.icon}
+                      </span>
+                      <h3 className="text-sm font-bold text-on-surface">{tier.name}</h3>
+                    </div>
+                    <p className="text-[11px] text-on-surface-variant mb-3">{tier.desc}</p>
+                    <div className="flex items-baseline gap-1.5 mb-3">
+                      <span className="text-2xl font-black text-primary font-mono">{tier.price}</span>
+                      <span className="text-[10px] text-on-surface-variant/60 font-mono">{tier.priceNote}</span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {tier.features.map((f) => (
+                        <li key={f} className="flex items-center gap-1.5 text-[11px] text-on-surface-variant">
+                          <span className="material-symbols-outlined text-tertiary text-xs">check</span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {scanTier === tier.id && (
+                      <div className="absolute top-4 right-4">
+                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                          <span className="material-symbols-outlined text-on-primary text-[14px]">check</span>
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* How it works */}
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                {
-                  icon: "travel_explore",
-                  title: "Agent Browses",
-                  desc: "AI agent launches a real browser and autonomously navigates your website — clicking links, scrolling, exploring pages.",
-                },
-                {
-                  icon: "screenshot_monitor",
-                  title: "Screenshots & Analysis",
-                  desc: "The agent takes screenshots of every page it visits and uses vision AI to understand design, layout, and content.",
-                },
-                {
-                  icon: "group_add",
-                  title: "Persona Generation",
-                  desc: "Based on deep understanding of the site, the agent generates realistic customer personas for overnight evaluation.",
-                },
-              ].map((item) => (
-                <div
-                  key={item.title}
-                  className="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10"
-                >
-                  <span className="material-symbols-outlined text-primary text-2xl mb-3">
-                    {item.icon}
-                  </span>
-                  <h3 className="text-sm font-bold text-on-surface mb-2">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    {item.desc}
-                  </p>
-                </div>
-              ))}
+            <div className="mt-10">
+              <label className="block text-xs font-mono text-on-surface-variant/60 uppercase tracking-widest mb-4">
+                How it works
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  {
+                    icon: "travel_explore",
+                    title: "Agent Browses",
+                    desc: "AI agent launches a real browser and autonomously navigates your website — clicking links, scrolling, exploring pages.",
+                  },
+                  {
+                    icon: "screenshot_monitor",
+                    title: "Full-Page Screenshots",
+                    desc: "The agent captures full-length screenshots of every page, giving you a complete view of each page's design and content.",
+                  },
+                  {
+                    icon: "group_add",
+                    title: "Persona Generation",
+                    desc: "Based on deep understanding of the site, the agent generates realistic customer personas for overnight evaluation.",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.title}
+                    className="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10"
+                  >
+                    <span className="material-symbols-outlined text-primary text-2xl mb-3">
+                      {item.icon}
+                    </span>
+                    <h3 className="text-sm font-bold text-on-surface mb-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Past Explorations */}
@@ -396,7 +488,7 @@ export default function ConfigureRunPage() {
                   {screenshots.map((src, i) => (
                     <div
                       key={i}
-                      className="aspect-video bg-surface-container-lowest rounded-lg border border-outline-variant/10 overflow-hidden"
+                      className="aspect-video bg-surface-container rounded-lg border border-outline-variant/10 overflow-hidden"
                     >
                       <img
                         src={screenshotSrc(src)}
@@ -553,7 +645,7 @@ export default function ConfigureRunPage() {
                         {screenshots.map((src, i) => (
                           <div
                             key={i}
-                            className="aspect-video bg-surface-container-lowest rounded-lg border border-outline-variant/10 overflow-hidden"
+                            className="aspect-video bg-surface-container rounded-lg border border-outline-variant/10 overflow-hidden"
                           >
                             <img
                               src={screenshotSrc(src)}
@@ -568,7 +660,7 @@ export default function ConfigureRunPage() {
                         {screenshots.slice(0, 8).map((src, i) => (
                           <div
                             key={i}
-                            className="w-32 h-20 shrink-0 bg-surface-container-lowest rounded border border-outline-variant/10 overflow-hidden"
+                            className="w-36 h-20 shrink-0 bg-surface-container rounded border border-outline-variant/10 overflow-hidden"
                           >
                             <img
                               src={screenshotSrc(src)}
@@ -580,7 +672,7 @@ export default function ConfigureRunPage() {
                         {screenshots.length > 8 && (
                           <button
                             onClick={() => setExpandScreenshots(true)}
-                            className="w-32 h-20 shrink-0 bg-surface-container rounded border border-outline-variant/10 flex items-center justify-center text-xs font-mono text-on-surface-variant hover:text-primary transition-colors"
+                            className="w-36 h-20 shrink-0 bg-surface-container rounded border border-outline-variant/10 flex items-center justify-center text-xs font-mono text-on-surface-variant hover:text-primary transition-colors"
                           >
                             +{screenshots.length - 8} more
                           </button>

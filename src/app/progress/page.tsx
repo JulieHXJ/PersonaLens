@@ -28,6 +28,27 @@ interface PastRun {
   hasResults: boolean;
 }
 
+interface ActiveRunState {
+  runId: string;
+  explorationId: string;
+  analysis: WebsiteAnalysis;
+  personas: Persona[];
+  results: InterviewResult[];
+  logs: LogEntry[];
+  running: boolean;
+  startTime: number;
+}
+
+function getActiveRun(): ActiveRunState | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as unknown as { __nightshift_active_run?: ActiveRunState }).__nightshift_active_run;
+}
+
+function setActiveRun(run: ActiveRunState | undefined) {
+  if (typeof window === "undefined") return;
+  (window as unknown as { __nightshift_active_run?: ActiveRunState }).__nightshift_active_run = run;
+}
+
 export default function ProgressPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span></div>}>
@@ -76,14 +97,53 @@ function ProgressContent() {
   const addLog = useCallback((type: LogEntry["type"], text: string) => {
     const now = new Date();
     const time = now.toTimeString().split(" ")[0];
-    setLogs((prev) => [...prev, { time, text, type }]);
+    const entry = { time, text, type };
+    setLogs((prev) => [...prev, entry]);
+    const active = getActiveRun();
+    if (active) active.logs = [...active.logs, entry];
   }, []);
 
-  // Load past run from URL param
+  // Load past run from URL param, reconnect to active run, or start new
   useEffect(() => {
     const runId = searchParams.get("run");
     if (runId) {
       loadPastRun(runId);
+      return;
+    }
+
+    // Reconnect to an active run that survived client-side navigation
+    const active = getActiveRun();
+    if (active?.running) {
+      setAnalysis(active.analysis);
+      setPersonas(active.personas);
+      setResults([...active.results]);
+      setLogs([...active.logs]);
+      setRunning(true);
+      startTimeRef.current = active.startTime;
+      runIdRef.current = active.runId;
+      explorationIdRef.current = active.explorationId;
+
+      const interval = setInterval(() => {
+        const a = getActiveRun();
+        if (!a) { clearInterval(interval); return; }
+        setResults([...a.results]);
+        setLogs([...a.logs]);
+        if (!a.running) {
+          setRunning(false);
+          clearInterval(interval);
+        }
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+
+    // Show results from a just-completed background run
+    if (active && !active.running) {
+      setAnalysis(active.analysis);
+      setPersonas(active.personas);
+      setResults([...active.results]);
+      setLogs([...active.logs]);
+      runIdRef.current = active.runId;
+      setActiveRun(undefined);
       return;
     }
 
@@ -117,6 +177,16 @@ function ProgressContent() {
     // Create run in DB, then start interviews
     createDbRun(run.explorationId, run.analysis, run.personas).then((dbRunId) => {
       runIdRef.current = dbRunId;
+      setActiveRun({
+        runId: dbRunId,
+        explorationId: run.explorationId || "",
+        analysis: run.analysis,
+        personas: run.personas,
+        results: initial,
+        logs: [],
+        running: true,
+        startTime: startTimeRef.current,
+      });
       runInterviews(run.analysis, run.personas, initial, dbRunId);
     });
 
@@ -167,6 +237,62 @@ function ProgressContent() {
     } catch { /* ignore */ }
   }
 
+  async function runSingleInterview(
+    persona: Persona,
+    analysis: WebsiteAnalysis,
+    device: string,
+    index: number,
+    total: number
+  ): Promise<{ transcript?: { role: string; content: string }[]; extractedData?: Record<string, unknown> }> {
+    const res = await fetch("/api/interview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ persona, analysis, device }),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.body) throw new Error("No response body");
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let result: { transcript?: { role: string; content: string }[]; extractedData?: Record<string, unknown> } | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      let eventType = "";
+      for (const line of lines) {
+        if (line.startsWith("event: ")) {
+          eventType = line.slice(7).trim();
+        } else if (line.startsWith("data: ") && eventType) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (eventType === "activity" && data.message) {
+              addLog("info", `  ${data.message}`);
+            } else if (eventType === "complete") {
+              result = { transcript: data.transcript, extractedData: data.extractedData };
+            } else if (eventType === "error") {
+              throw new Error(data.error || "Interview failed");
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) { /* skip malformed JSON */ }
+            else throw e;
+          }
+          eventType = "";
+        }
+      }
+    }
+
+    if (!result) throw new Error("No result received");
+    return result;
+  }
+
   async function runInterviews(
     analysis: WebsiteAnalysis,
     personas: Persona[],
@@ -180,6 +306,8 @@ function ProgressContent() {
 
       updated[i] = { ...updated[i], status: "running" };
       setResults([...updated]);
+      const ar1 = getActiveRun();
+      if (ar1) ar1.results = [...updated];
       const device = i % 3 === 2 ? "mobile" : "desktop";
       addLog(
         "active",
@@ -187,17 +315,7 @@ function ProgressContent() {
       );
 
       try {
-        const res = await fetch("/api/interview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ persona, analysis, device }),
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
+        const data = await runSingleInterview(persona, analysis, device, i, personas.length);
         updated[i] = {
           ...updated[i],
           status: "completed",
@@ -205,6 +323,8 @@ function ProgressContent() {
           extractedData: data.extractedData,
         };
         setResults([...updated]);
+        const ar2 = getActiveRun();
+        if (ar2) ar2.results = [...updated];
         addLog(
           "complete",
           `Interview ${i + 1}/${personas.length}: ${persona.name} — COMPLETED (buy signal: ${data.extractedData?.buySignal ?? "N/A"})`
@@ -216,6 +336,8 @@ function ProgressContent() {
           error: err instanceof Error ? err.message : "Unknown error",
         };
         setResults([...updated]);
+        const ar3 = getActiveRun();
+        if (ar3) ar3.results = [...updated];
         addLog(
           "error",
           `Interview ${i + 1}/${personas.length}: ${persona.name} — FAILED: ${err instanceof Error ? err.message : "Unknown error"}`
@@ -225,7 +347,6 @@ function ProgressContent() {
 
     addLog("info", "All interviews completed.");
 
-    // Save to DB
     if (dbRunId) {
       try {
         await fetch("/api/runs", {
@@ -239,7 +360,6 @@ function ProgressContent() {
       }
     }
 
-    // Also keep localStorage for backward compat
     localStorage.setItem(
       "nightshift-results",
       JSON.stringify({ analysis, personas, results: updated, runId: dbRunId })
@@ -247,6 +367,8 @@ function ProgressContent() {
 
     addLog("complete", "REPORT READY. Navigate to Morning Report to view results.");
     setRunning(false);
+    const arFinal = getActiveRun();
+    if (arFinal) arFinal.running = false;
   }
 
   const completedCount = results.filter((r) => r.status === "completed").length;

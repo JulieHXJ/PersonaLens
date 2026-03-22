@@ -11,8 +11,8 @@ const log = createLogger("api:explore");
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
-  const { url } = await req.json();
-  log.info(`Explore request received`, { url });
+  const { url, maxSteps } = await req.json();
+  log.info(`Explore request received`, { url, maxSteps });
 
   if (!url || typeof url !== "string") {
     log.warn("Missing URL in request");
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       };
 
       try {
-        const result = await runBrowserAgent(url, emit);
+        const result = await runBrowserAgent(url, emit, { maxSteps: maxSteps || undefined });
         const durationMs = Date.now() - startTime;
 
         saveExplorationEvents(explorationId, allEvents);

@@ -29,6 +29,7 @@ interface Finding {
   description: string;
   pageUrl?: string;
   evidence?: string;
+  rootCauseType?: "system_bug" | "ux_friction" | "semantic_confusion";
 }
 
 interface StoredResult {
@@ -273,13 +274,56 @@ function ReportContent() {
     .slice(0, 5);
 
   // Aggregate detailed findings across all personas
-  const allFindings: (Finding & { persona: string })[] = [];
+  const rawFindings: (Finding & { persona: string })[] = [];
   completed.forEach((r) => {
     (r.extractedData?.detailedFindings || []).forEach((f) => {
-      allFindings.push({ ...f, persona: r.personaName });
+      rawFindings.push({ ...f, persona: r.personaName });
     });
   });
-  const criticalFindings = allFindings.filter((f) => f.severity === "critical" || f.severity === "major");
+
+  // --- Verification Layer ---
+  // 1. Heuristic: if feedback text contains a long sentence as the "click target",
+  //    and rootCauseType is missing, infer semantic_confusion
+  const allFindings = rawFindings.map((f) => {
+    let rootCause = f.rootCauseType || "system_bug";
+
+    // Auto-detect semantic confusion: long click target descriptions reported as bugs
+    if (rootCause === "system_bug" && (f.category === "bug" || f.category === "confusion")) {
+      const clickPatterns = /click(?:ing|ed)?\s+['""'"](.{40,})['""'"]/i;
+      const match = f.description.match(clickPatterns);
+      if (match) {
+        rootCause = "semantic_confusion";
+      }
+    }
+
+    // 2. Cross-check: group similar descriptions; if <5% of personas report the same
+    //    "bug" and it looks like a text-click issue, downgrade to semantic_confusion
+    if (rootCause === "system_bug" && f.severity === "critical") {
+      const similarCount = rawFindings.filter((other) =>
+        other.description === f.description || other.title === f.title
+      ).length;
+      const threshold = Math.max(1, Math.ceil(completed.length * 0.05));
+      if (similarCount <= threshold && /did nothing|did not|does nothing|doesn't/i.test(f.description)) {
+        rootCause = "ux_friction";
+      }
+    }
+
+    // 3. Downgrade semantic_confusion from critical/major to minor
+    let severity = f.severity;
+    if (rootCause === "semantic_confusion" && (severity === "critical" || severity === "major")) {
+      severity = "minor";
+    }
+
+    return { ...f, rootCauseType: rootCause as Finding["rootCauseType"], severity };
+  });
+
+  const criticalFindings = allFindings.filter(
+    (f) => (f.severity === "critical" || f.severity === "major") && f.rootCauseType !== "semantic_confusion"
+  );
+  const semanticFindings = allFindings.filter((f) => f.rootCauseType === "semantic_confusion");
+  const uxFrictionFindings = allFindings.filter(
+    (f) => f.rootCauseType === "ux_friction" && f.severity !== "positive"
+  );
 
   const signalLabel =
     demandPercent >= 70
@@ -391,14 +435,14 @@ function ReportContent() {
 
       {/* Content */}
       <div className="p-6 lg:p-10 max-w-6xl mx-auto space-y-12">
-        {/* Detailed Findings (Issues + Evidence) */}
+        {/* Confirmed Issues (system_bug + ux_friction, critical/major only) */}
         {criticalFindings.length > 0 && (
           <section>
             <h3 className="text-sm font-mono uppercase tracking-widest text-error mb-2">
-              Detailed Issues Found
+              Confirmed Issues
             </h3>
             <p className="text-xs text-on-surface-variant mb-6">
-              Specific problems reported by personas with evidence and page locations.
+              Verified problems — real bugs and UX friction points reported by personas.
             </p>
             <div className="space-y-4">
               {criticalFindings.map((f, i) => (
@@ -420,6 +464,13 @@ function ReportContent() {
                       <span className="text-[10px] font-mono text-on-surface-variant/60 bg-surface-container px-2 py-0.5 rounded">
                         {f.category}
                       </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                        f.rootCauseType === "system_bug"
+                          ? "bg-error/10 text-error"
+                          : "bg-amber-500/10 text-amber-600"
+                      }`}>
+                        {f.rootCauseType === "system_bug" ? "System Bug" : "UX Friction"}
+                      </span>
                     </div>
                     <span className="text-[10px] font-mono text-on-surface-variant/40">
                       {f.persona}
@@ -440,6 +491,65 @@ function ReportContent() {
                       <p className="text-xs text-on-surface-variant italic">&ldquo;{f.evidence}&rdquo;</p>
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* UX Friction — things that work but are hard to find/use */}
+        {uxFrictionFindings.length > 0 && uxFrictionFindings.some((f) => f.severity === "minor") && (
+          <section>
+            <h3 className="text-sm font-mono uppercase tracking-widest text-amber-500 mb-2">
+              UX Friction Points
+            </h3>
+            <p className="text-xs text-on-surface-variant mb-6">
+              Features that work but were hard to find or confusing to use.
+            </p>
+            <div className="space-y-3">
+              {uxFrictionFindings.filter((f) => f.severity === "minor").map((f, i) => (
+                <div key={i} className="bg-surface-container-lowest p-4 rounded-xl border-l-4 border-amber-500/40">
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-amber-500/10 text-amber-600">
+                        UX Friction
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-on-surface-variant/40">{f.persona}</span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">{f.description}</p>
+                  {f.pageUrl && (
+                    <div className="text-[10px] font-mono text-primary/70 mt-2">Page: {f.pageUrl}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Semantic Confusion — persona mistakes, not real bugs */}
+        {semanticFindings.length > 0 && (
+          <section>
+            <h3 className="text-sm font-mono uppercase tracking-widest text-on-surface-variant/60 mb-2">
+              Filtered Out: User Confusion
+            </h3>
+            <p className="text-xs text-on-surface-variant mb-6">
+              Issues caused by personas clicking non-interactive text (headings, descriptions) instead of the actual buttons.
+              These are NOT website bugs — they indicate the persona misidentified the click target.
+            </p>
+            <div className="space-y-2">
+              {semanticFindings.map((f, i) => (
+                <div key={i} className="bg-surface-container-lowest/50 p-4 rounded-xl border border-outline-variant/5 opacity-60">
+                  <div className="flex items-start justify-between gap-4 mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-surface-container text-on-surface-variant/50">
+                        Semantic Confusion
+                      </span>
+                      <span className="text-[10px] font-mono text-on-surface-variant/30 line-through">{f.category}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-on-surface-variant/30">{f.persona}</span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant/50 leading-relaxed">{f.description}</p>
                 </div>
               ))}
             </div>
