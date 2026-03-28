@@ -1,4 +1,4 @@
-import { CandidatePersona, TraceEvent, PipelineResult, SimulationResult, DashboardInsight } from "@/types/pipeline";
+import { CandidatePersona, TraceEvent, PipelineResult, SimulationResult, DashboardInsight, SavedReport } from "@/types/pipeline";
 
 export const mockTraceEvents: TraceEvent[] = [
   {
@@ -161,6 +161,8 @@ export const mockPipelineResult: PipelineResult = {
 export const mockSavedReports: SavedReport[] = [
   {
     id: "report-1",
+    isExample: true,
+    isTemporary: false,
     url: "https://stripe.com",
     site_title: "Stripe",
     date_analyzed: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
@@ -184,6 +186,8 @@ export const mockSavedReports: SavedReport[] = [
   },
   {
     id: "report-2",
+    isExample: false,
+    isTemporary: true,
     url: "https://vercel.com",
     site_title: "Vercel",
     date_analyzed: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5 hours ago
@@ -206,3 +210,10 @@ export const mockSavedReports: SavedReport[] = [
     }
   }
 ];
+
+export const permanentExampleReport: SavedReport = {
+  ...mockSavedReports[0],
+  id: "example-report",
+  isExample: true,
+  isTemporary: false,
+};

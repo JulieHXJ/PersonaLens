@@ -21,6 +21,27 @@ import {
   DashboardInsight,
 } from "@/types/pipeline";
 import { Persona, WebsiteAnalysis } from "@/lib/types";
+import { permanentExampleReport } from "@/lib/pipeline-mock";
+
+const SESSION_REPORTS_KEY = "marketMirror_session_reports";
+const LEGACY_REPORTS_KEY = "marketMirror_reports";
+
+function normalizeSavedReport(
+  report: unknown,
+  fallback: { isExample: boolean; isTemporary: boolean }
+): SavedReport | null {
+  if (!report || typeof report !== "object") return null;
+  const raw = report as Partial<SavedReport> & { isExample?: unknown; isTemporary?: unknown };
+  if (typeof raw.id !== "string" || typeof raw.url !== "string" || typeof raw.site_title !== "string") {
+    return null;
+  }
+
+  return {
+    ...raw,
+    isExample: typeof raw.isExample === "boolean" ? raw.isExample : fallback.isExample,
+    isTemporary: typeof raw.isTemporary === "boolean" ? raw.isTemporary : fallback.isTemporary,
+  } as SavedReport;
+}
 
 export default function Home() {
   const [stage, setStage] = useState<AppStage>("idle");
@@ -309,15 +330,31 @@ export default function Home() {
   }, [stage]);
 
   useEffect(() => {
-    const stored = localStorage.getItem("marketMirror_reports");
+    const storedSessionReports = sessionStorage.getItem(SESSION_REPORTS_KEY);
     const storedGeminiApiKey = localStorage.getItem("marketMirror_geminiApiKey");
-    if (stored) {
+
+    if (storedSessionReports) {
       try {
-        setSavedReports(JSON.parse(stored));
+        const parsed = JSON.parse(storedSessionReports);
+        const sessionReports = Array.isArray(parsed)
+          ? parsed
+              .map((report) => normalizeSavedReport(report, { isExample: false, isTemporary: true }))
+              .filter((report): report is SavedReport => !!report)
+              .filter((report) => !report.isExample)
+              .map((report) => ({ ...report, isExample: false, isTemporary: true }))
+          : [];
+        setSavedReports([permanentExampleReport, ...sessionReports]);
       } catch (e) {
-        console.error("Failed to parse saved reports", e);
+        console.error("Failed to parse session reports", e);
+        setSavedReports([permanentExampleReport]);
       }
+    } else {
+      setSavedReports([permanentExampleReport]);
     }
+
+    // Cleanup old persistent report key so temporary reports don't survive app restarts.
+    localStorage.removeItem(LEGACY_REPORTS_KEY);
+
     if (storedGeminiApiKey) {
       setGeminiApiKey(storedGeminiApiKey);
       setIsGeminiKeySaved(true);
@@ -326,8 +363,12 @@ export default function Home() {
   }, []);
 
   const saveReportsToStorage = (reports: SavedReport[]) => {
-    setSavedReports(reports);
-    localStorage.setItem("marketMirror_reports", JSON.stringify(reports));
+    const sessionReports = reports
+      .filter((report) => report.isTemporary && !report.isExample)
+      .map((report) => ({ ...report, isExample: false, isTemporary: true }));
+
+    setSavedReports([permanentExampleReport, ...sessionReports]);
+    sessionStorage.setItem(SESSION_REPORTS_KEY, JSON.stringify(sessionReports));
   };
 
   const handleNewAnalysis = () => {
@@ -393,6 +434,8 @@ export default function Home() {
 
     const newReport: SavedReport = {
       id: crypto.randomUUID(),
+      isExample: false,
+      isTemporary: true,
       url: currentUrl,
       site_title: new URL(currentUrl).hostname,
       date_analyzed: new Date().toISOString(),
@@ -411,7 +454,8 @@ export default function Home() {
       }
     };
 
-    saveReportsToStorage([newReport, ...savedReports]);
+    const currentSessionReports = savedReports.filter((report) => report.isTemporary && !report.isExample);
+    saveReportsToStorage([newReport, ...currentSessionReports]);
     alert("Report saved to Document Library!");
   };
 

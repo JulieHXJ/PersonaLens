@@ -1,212 +1,213 @@
 # MarketMirror
 
-**Most tools test code. We test revenue.**
+**AI synthetic users that tell you why your website converts — or why it doesn't.**
 
-MarketMirror is an AI-powered website evaluation tool that helps early-stage teams understand how their product website is perceived **before** they waste engineering time, ad spend, or launch momentum.
+MarketMirror simulates how different customer types experience your product before you ship changes, spend on ads, or scale acquisition.
 
-Instead of only tracking clicks and bounce rates, MarketMirror simulates how different users might interpret a live website and generates a structured report about clarity, trust, pricing, and friction.
-
----
-
-## Overview
-
-Many SaaS teams build quickly, but learn too late.
-
-Traditional analytics can tell you **what** users did, but not **why** they left.  
-Manual interviews can reveal deeper insights, but they are slow, expensive, and hard to scale.
-
-MarketMirror bridges that gap.
-
-Given a website URL, the system:
-
-1. visits the website,
-2. captures screenshots,
-3. extracts structured evidence from the page,
-4. sends that evidence to an AI reasoning layer,
-5. returns a report with simulated user insights and improvement suggestions.
-
-The core principle is simple:
-
-> **The browser looks at the website.  
-> The AI interprets the evidence.**
-
-The AI does **not** browse the web or take screenshots by itself.
+Instead of guessing why users drop off, you can **watch realistic AI personas explore your site and identify friction, trust gaps, and buying signals.**
 
 ---
 
-## Problem
+# What this solves
 
-Early-stage founders, PMs, and small SaaS teams often face the same challenge:
+Early-stage teams waste months building features before knowing:
 
-- users do not understand the value proposition,
-- pricing feels unclear or untrustworthy,
-- calls to action are weak,
-- important information is hard to find.
+* Why users don’t trust pricing
+* Where conversion friction appears
+* Which segments resonate
+* What objections block purchase
 
-These issues are often discovered only **after launch**, when time and money have already been spent.
+Traditional analytics tell you **what happened**.
 
-MarketMirror helps teams learn earlier.
-
----
-
-## Solution
-
-MarketMirror runs a lightweight website evaluation workflow and produces an AI-generated report in around one minute.
-
-It focuses on:
-
-- **value proposition clarity**
-- **pricing visibility**
-- **CTA clarity**
-- **trust signals**
-- **user friction**
-- **unanswered user questions**
-
-Instead of just collecting metrics, MarketMirror simulates how different user types may react to the website.
+MarketMirror shows you **why it happened.**
 
 ---
 
-## Key Features
+# How it works
 
-- Analyze a live website from a single URL
-- Capture screenshots in **desktop**, **tablet**, and **mobile** views
-- Extract structured page evidence such as:
-  - title
-  - headings
-  - CTAs
-  - forms
-  - pricing mentions
-  - feature sections
-  - internal and external links
-- Generate AI-based reasoning from extracted evidence
-- Produce a structured “Morning Report”
-- Return dashboard-ready output for frontend cards and detailed analysis views
+MarketMirror combines:
 
----
+Browser automation
+AI reasoning
+Synthetic personas
+Behavior simulation
 
-## How It Works
-
-MarketMirror is built as a four-layer pipeline:
-
-### A. URL Access Layer
-Responsible for:
-- normalizing the input URL
-- requesting the page
-- retrieving HTML
-- discovering a small number of main navigation links
-
-This layer handles access logic only.  
-It does **not** perform AI analysis.
-
-### B. Browser Capture Layer
-Responsible for:
-- opening the website in a real browser environment
-- capturing screenshots with Playwright
-- generating desktop / tablet / mobile views
-- storing screenshot paths for frontend display
-
-### C. Extraction Layer
-Responsible for:
-- parsing HTML
-- extracting structured evidence from the page
-
-Examples:
-- page title
-- h1 / h2 / h3 headings
-- button labels and CTAs
-- forms and input types
-- pricing-related text
-- feature sections
-- link structure
-
-### D. AI Reasoning Layer
-Responsible for:
-- interpreting structured evidence
-- classifying the page type
-- inferring website category
-- generating synthetic user personas
-- evaluating clarity, trust, friction, and improvement opportunities
-
-The AI only receives the structured evidence collected by the system.
-
----
-
-## Why This Is Different
-
-Most website tools focus on:
-- analytics,
-- A/B testing,
-- SEO,
-- heatmaps,
-- accessibility checklists.
-
-MarketMirror focuses on **simulated perception**.
-
-It does not just ask:
-- “Where did the user click?”
-
-It asks:
-- “What might this user think?”
-- “What feels unclear?”
-- “What feels risky or unconvincing?”
-- “Why might this visitor hesitate?”
-
-That makes the output more useful in the early product and messaging stage.
-
----
-
-## Target Users
-
-MarketMirror is designed for:
-
-- **early-stage SaaS founders**
-- **product managers**
-- **growth teams**
-- **digital agencies**
-- **startup teams without a dedicated research department**
-
----
-
-## Example Use Cases
-
-- Validate a landing page before launch
-- Review a SaaS pricing page
-- Find weak or confusing CTA wording
-- Detect trust issues on first impression
-- Generate a quick usability-style report without scheduling interviews
-- Create client-facing website audit reports for agencies
-
----
-
-## Tech Stack
-
-This project is designed as a modular MVP using:
-
-- **Node.js**
-- **TypeScript**
-- **Express**
-- **Playwright**
-- **Cheerio**
-- **OpenAI API**
-
----
-
-## Architecture
+Pipeline:
 
 ```text
-Input URL
-   ↓
-URL Access Layer
-   ↓
-Browser Capture Layer
-   ↓
-Extraction Layer
-   ↓
-AI Reasoning Layer
-   ↓
-Structured Report + Dashboard Cards
-=======
-# ProductEvaluator
-AI project developed during Cursor hackathon.
->>>>>>> origin/ziqing
+URL input
+→ Website exploration
+→ Screenshot capture
+→ Structure extraction
+→ AI persona generation
+→ User simulation
+→ Insight aggregation
+```
 
+This allows teams to run **customer discovery overnight** without interviews.
+
+---
+
+# Quickstart
+
+## 1 Install
+
+Clone the repo:
+
+```bash
+git clone https://github.com/JulieHXJ/MarketMirror.git
+cd marketmirror
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start dev server:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+---
+
+# Usage
+
+## 1 Configure your API key
+
+MarketMirror requires your own AI API key.
+
+This design ensures:
+
+* No keys stored in repo
+* No shared quota issues
+* No accidental leaks
+* User-controlled billing
+
+Enter your key in the UI.
+
+The key is stored locally only.
+
+---
+
+## 2 Run a website analysis
+
+Enter a URL:
+
+```
+https://example.com
+```
+
+Click:
+
+**Audit Website**
+
+MarketMirror will automatically:
+
+• Launch a browser
+• Explore the site
+• Capture screenshots
+• Extract product signals
+• Generate customer personas
+• Simulate browsing behavior
+• Produce insights
+
+---
+
+## 3 Review the intelligence pipeline
+
+The workspace shows a continuous execution flow:
+
+### Reconnaissance
+
+Website structure discovery
+
+### Synthetic Users
+
+AI-generated customer profiles
+
+### Simulation
+
+Behavior modeling and friction detection
+
+### Intelligence Dashboard
+
+Buy signals and objections
+
+Unlike dashboards, MarketMirror shows the reasoning path.
+
+---
+
+## 4 Save reports
+
+Completed analyses will be stored in:
+
+Document Library
+
+This allows:
+
+• Comparing different products
+• Tracking improvements
+• Replaying analysis
+
+Prototype version uses local storage.
+
+Future versions will support:
+
+Team workspaces
+Cloud storage
+History timelines
+
+---
+
+# Tech stack
+
+Frontend:
+
+Next.js
+React
+Tailwind
+
+Pipeline:
+
+Playwright (browser automation)
+LLM reasoning layer
+Structured extraction engine
+
+Architecture:
+
+```text
+UI Layer
+Workspace orchestration
+
+Pipeline Layer
+Exploration engine
+
+Extraction Layer
+Structured signals
+
+AI Layer
+Reasoning + persona generation
+```
+
+---
+
+# Contributing
+
+This project is collabrated with 
+
+---
+
+# License
+
+MIT
+
+---

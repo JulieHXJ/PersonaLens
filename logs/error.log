@@ -233,3 +233,51 @@
   "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://www.cursor.come/\nCall log:\n\u001b[2m  - navigating to \"https://www.cursor.come/\", waiting until \"networkidle\"\u001b[22m\n",
   "stack": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://www.cursor.come/\nCall log:\n\u001b[2m  - navigating to \"https://www.cursor.come/\", waiting until \"networkidle\"\u001b[22m\n\n    at runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1093:44)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:96:32)"
 }
+[2026-03-28T18:38:27.733Z] [ERROR] [agent:browser] Agent failed for https://level3.hn/ {
+  "error": "403 status code (no body)",
+  "stack": "Error: 403 status code (no body)\n    at APIError.generate (webpack-internal:///(rsc)/./node_modules/openai/core/error.mjs:67:20)\n    at OpenAI.makeStatusError (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:238:71)\n    at OpenAI.makeRequest (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:407:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async agentLLMCall (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:99:20)\n    at async runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1207:30)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:96:32)",
+  "durationMs": 7422
+}
+[2026-03-28T18:38:27.734Z] [ERROR] [api:explore] Explore failed {
+  "url": "https://level3.hn/",
+  "explorationId": "1774723100310-za30p0",
+  "eventCount": 5,
+  "error": "403 status code (no body)",
+  "stack": "Error: 403 status code (no body)\n    at APIError.generate (webpack-internal:///(rsc)/./node_modules/openai/core/error.mjs:67:20)\n    at OpenAI.makeStatusError (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:238:71)\n    at OpenAI.makeRequest (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:407:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async agentLLMCall (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:99:20)\n    at async runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1207:30)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:96:32)"
+}
+[2026-03-28T18:39:05.195Z] [ERROR] [agent:browser] Agent failed for https://level3.hn/ {
+  "error": "403 status code (no body)",
+  "stack": "Error: 403 status code (no body)\n    at APIError.generate (webpack-internal:///(rsc)/./node_modules/openai/core/error.mjs:67:20)\n    at OpenAI.makeStatusError (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:238:71)\n    at OpenAI.makeRequest (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:407:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async agentLLMCall (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:99:20)\n    at async runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1207:30)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:96:32)",
+  "durationMs": 5116
+}
+[2026-03-28T18:39:05.196Z] [ERROR] [api:explore] Explore failed {
+  "url": "https://level3.hn/",
+  "explorationId": "1774723140075-q1n8l6",
+  "eventCount": 5,
+  "error": "403 status code (no body)",
+  "stack": "Error: 403 status code (no body)\n    at APIError.generate (webpack-internal:///(rsc)/./node_modules/openai/core/error.mjs:67:20)\n    at OpenAI.makeStatusError (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:238:71)\n    at OpenAI.makeRequest (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:407:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async agentLLMCall (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:99:20)\n    at async runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1207:30)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:96:32)"
+}
+[2026-03-28T18:51:13.135Z] [ERROR] [agent:browser] Agent failed for https://level3.hn/ {
+  "error": "403 status code (no body)",
+  "stack": "Error: 403 status code (no body)\n    at APIError.generate (webpack-internal:///(rsc)/./node_modules/openai/core/error.mjs:67:20)\n    at OpenAI.makeStatusError (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:238:71)\n    at OpenAI.makeRequest (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:407:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async agentLLMCall (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:98:20)\n    at async runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1209:30)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:97:32)",
+  "durationMs": 6667
+}
+[2026-03-28T18:51:13.137Z] [ERROR] [api:explore] Explore failed {
+  "url": "https://level3.hn/",
+  "explorationId": "1774723866467-o369ez",
+  "eventCount": 5,
+  "error": "403 status code (no body)",
+  "stack": "Error: 403 status code (no body)\n    at APIError.generate (webpack-internal:///(rsc)/./node_modules/openai/core/error.mjs:67:20)\n    at OpenAI.makeStatusError (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:238:71)\n    at OpenAI.makeRequest (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:407:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async agentLLMCall (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:98:20)\n    at async runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1209:30)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:97:32)"
+}
+[2026-03-28T18:52:14.221Z] [ERROR] [agent:browser] Agent failed for https://level3.hn/ {
+  "error": "403 status code (no body)",
+  "stack": "Error: 403 status code (no body)\n    at APIError.generate (webpack-internal:///(rsc)/./node_modules/openai/core/error.mjs:67:20)\n    at OpenAI.makeStatusError (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:238:71)\n    at OpenAI.makeRequest (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:407:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async agentLLMCall (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:98:20)\n    at async runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1209:30)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:97:32)",
+  "durationMs": 5063
+}
+[2026-03-28T18:52:14.222Z] [ERROR] [api:explore] Explore failed {
+  "url": "https://level3.hn/",
+  "explorationId": "1774723929157-pipmkr",
+  "eventCount": 5,
+  "error": "403 status code (no body)",
+  "stack": "Error: 403 status code (no body)\n    at APIError.generate (webpack-internal:///(rsc)/./node_modules/openai/core/error.mjs:67:20)\n    at OpenAI.makeStatusError (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:238:71)\n    at OpenAI.makeRequest (webpack-internal:///(rsc)/./node_modules/openai/client.mjs:407:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async agentLLMCall (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:98:20)\n    at async runBrowserAgent (webpack-internal:///(rsc)/./src/lib/browser-agent.ts:1209:30)\n    at async Object.start (webpack-internal:///(rsc)/./src/app/api/explore/route.ts:97:32)"
+}

@@ -150,6 +150,8 @@ export interface AnalysisSession {
 
 export interface SavedReport {
   id: string;
+  isExample: boolean;
+  isTemporary: boolean;
   url: string;
   site_title: string;
   date_analyzed: string; // ISO string
