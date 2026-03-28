@@ -202,12 +202,5 @@ Reasoning + persona generation
 
 # Contributing
 
-This project is collabrated with 
+This project is a group project collaborated with @kmw-technology, @SinYita and @ziqing129.
 
----
-
-# License
-
-MIT
-
----
